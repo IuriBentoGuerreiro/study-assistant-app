@@ -1,24 +1,17 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { login as loginApi, getMe, logout as logoutApi } from "@/src/services/auth-service";
 
 type User = {
-  id: string;
-  name: string;
-  email: string;
+  username: string;
+  roles: string[];
 };
 
 type AuthContextType = {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   loading: boolean;
@@ -47,12 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadUser();
   }, []);
 
-  async function login(email: string, password: string) {
-    await loginApi(email, password);
-
+  async function login(username: string, password: string) {
+    await loginApi({ username, password });
     const user = await getMe();
     setUser(user);
-
     router.push("/dashboard");
   }
 
@@ -63,15 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        isAuthenticated: !!user,
-        loading,
-      }}
-    >
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading }}>
       {children}
     </AuthContext.Provider>
   );

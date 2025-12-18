@@ -11,25 +11,21 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  console.log("SUBMIT DISPARADO"); // 👈
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
 
-  setLoading(true);
-  setError(null);
+    setLoading(true);
+    setError(null);
 
-  try {
-    console.log("Chamando login...", username, password); // 👈
-    await login(username, password);
-    console.log("LOGIN OK"); // 👈
-  } catch (err) {
-    console.error("ERRO NO LOGIN", err); // 👈
-    setError("E-mail ou senha inválidos");
-  } finally {
-    setLoading(false);
+    try {
+      await login(username, password);
+    } catch (err) {
+      setError("E-mail ou senha inválidos");
+    } finally {
+      setLoading(false);
+    }
   }
-}
-
+  
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>

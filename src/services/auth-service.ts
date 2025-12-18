@@ -1,51 +1,20 @@
-function getApiUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_URL;
+import { api } from "../lib/api";
+import { UserResponse } from "../types/UserResponse";
 
-  if (!url) {
-    throw new Error("NEXT_PUBLIC_API_URL não está definida");
-  }
+export type LoginRequest = {
+  username: string;
+  password: string;
+};
 
-  return url;
-}
-
-export async function login(username: string, password: string) {
-  const API_URL = getApiUrl();
-
-  const response = await fetch(`${API_URL}/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    body: JSON.stringify({ username, password }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Login inválido");
-  }
-}
-
-export async function getMe() {
-  const API_URL = getApiUrl();
-
-  const response = await fetch(`${API_URL}/auth/me`, {
-    method: "GET",
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    throw new Error("Não autenticado");
-  }
-
-  return response.json();
+export async function login(data: LoginRequest) {
+  await api.post<void>("/auth/login", data);
 }
 
 export async function logout() {
-  const API_URL = getApiUrl();
+  await api.post<void>("/auth/logout");
+}
 
-  await fetch(`${API_URL}/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-  });
+export async function getMe(): Promise<UserResponse> {
+  const { data } = await api.get<UserResponse>("/auth/me");
+  return data;
 }
