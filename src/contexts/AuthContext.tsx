@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { login as loginApi, getMe, logout as logoutApi } from "@/src/services/auth-service";
+import { login as loginApi, logout as logoutApi } from "@/src/services/auth-service";
 
 type User = {
   username: string;
@@ -28,7 +28,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadUser() {
       try {
-        const user = await getMe();
         setUser(user);
       } catch {
         setUser(null);
@@ -42,7 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(username: string, password: string) {
     await loginApi({ username, password });
-    const user = await getMe();
     setUser(user);
     router.push("/dashboard");
   }

@@ -1,20 +1,33 @@
 import { api } from "../lib/api";
 import { UserResponse } from "../types/UserResponse";
+import Cookies from "js-cookie";
 
 export type LoginRequest = {
   username: string;
   password: string;
 };
 
-export async function login(data: LoginRequest) {  
-  await api.post<void>("/auth/login", data);
+type LoginResponse = {
+  accessToken: string;
+};
+
+const COOKIE_NAME = "access_token";
+
+export async function login(data: LoginRequest): Promise<void> {
+  const { data: response } = await api.post<LoginResponse>(
+    "/auth/login",
+    data
+  );
+
+  Cookies.set("access_token", response.accessToken, {
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
 }
 
-export async function logout() {
-  await api.post<void>("/auth/logout");
+export function logout(): void {
+  document.cookie = `${COOKIE_NAME}=; Path=/; Max-Age=0`;
 }
 
-export async function getMe(): Promise<UserResponse> {
-  const { data } = await api.get<UserResponse>("/auth/me");
-  return data;
-}

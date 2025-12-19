@@ -1,18 +1,8 @@
 import axios from "axios";
 
-function getApiUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_URL;
-
-  if (!url) {
-    throw new Error("NEXT_PUBLIC_API_URL não está definida");
-  }
-
-  return url;
-}
-
 export const api = axios.create({
-  baseURL: getApiUrl(),
-  withCredentials: true,
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  withCredentials: true, // 👈 ESSENCIAL para cookies
   headers: {
     "Content-Type": "application/json",
   },
