@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 export default function DashboardPage() {
   const router = useRouter();
 
+    const handleClickChat = () => {
+    router.push("/chat");
+  };
+
   return (
     <div className="min-h-screen bg-black text-white flex">
       <aside className="w-64 border-r border-white/10 bg-black/60 backdrop-blur-xl p-6 hidden md:flex flex-col">
@@ -48,7 +52,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/10 transition">
+            <button
+            onClick={handleClickChat} 
+            className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/10 transition">
               Novo Estudo
             </button>
             <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center text-sm">
