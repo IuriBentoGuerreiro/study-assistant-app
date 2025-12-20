@@ -1,5 +1,4 @@
 import { api } from "../lib/api";
-import { UserResponse } from "../types/UserResponse";
 import Cookies from "js-cookie";
 
 export type LoginRequest = {
@@ -19,15 +18,15 @@ export async function login(data: LoginRequest): Promise<void> {
     data
   );
 
-  Cookies.set("access_token", response.accessToken, {
+  const token = response.accessToken;
+
+  // ✅ Salva no cookie
+  Cookies.set(COOKIE_NAME, token, {
     path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
 
+  // ✅ SETA O AUTHORIZATION GLOBAL
+  api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 }
-
-export function logout(): void {
-  document.cookie = `${COOKIE_NAME}=; Path=/; Max-Age=0`;
-}
-

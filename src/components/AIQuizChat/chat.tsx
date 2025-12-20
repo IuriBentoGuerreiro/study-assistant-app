@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { Loader2, Send, Sparkles, Brain, RotateCcw } from "lucide-react";
+import { api } from "@/src/lib/api";
 
 type Question = {
   id: string;
@@ -42,57 +43,37 @@ export default function AIQuizChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const generateQuestions = async (topic: string) => {
-    setIsGenerating(true);
-    
-    try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [
-            {
-              role: "user",
-              content: `Com base no seguinte texto, gere exatamente 10 questões de múltipla escolha com 4 alternativas cada. Formate a resposta APENAS como um array JSON válido, sem nenhum texto adicional ou markdown.
+const generateQuestions = async (topic: string) => {
+  setIsGenerating(true);
+  
+  try {
+    const response = await api.post('/api/ia/gerar', topic, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
 
-Texto: "${topic}"
-
-Formato esperado:
-[
-  {
-    "question": "Pergunta aqui?",
-    "options": ["A) opção 1", "B) opção 2", "C) opção 3", "D) opção 4"],
-    "correctAnswer": "A"
-  }
-]`,
-            },
-          ],
-        }),
-      });
-
-      const data = await response.json();
-      const textContent = data.content
-        .filter((item: any) => item.type === "text")
-        .map((item: any) => item.text)
-        .join("");
-
-      const cleanJson = textContent.replace(/```json\n?|\n?```/g, "").trim();
-      const questionsData = JSON.parse(cleanJson);
+    const questionsData: Array<{
+      statement: string;
+      options: string[];
+      correctAnswerIndex: number;
+    }> = response.data;
 
       const sessionId = crypto.randomUUID();
-      const questions: Question[] = questionsData.map((q: any, idx: number) => ({
-        id: `${sessionId}-q${idx + 1}`,
-        question: `${q.question}\n\n${q.options.join("\n")}\n\nResposta correta: ${q.correctAnswer}`,
-        userAnswer: undefined,
-        isCorrect: undefined,
-      }));
-
-      // Persistir no storage seria aqui
-      // await window.storage.set(`session:${sessionId}`, JSON.stringify({...}))
+      const questions: Question[] = questionsData.map((q, idx) => {
+        const optionsText = q.options
+          .map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`)
+          .join("\n");
+        
+        const correctLetter = String.fromCharCode(65 + q.correctAnswerIndex);
+        
+        return {
+          id: `${sessionId}-q${idx + 1}`,
+          question: `${q.statement}\n\n${optionsText} `,
+          userAnswer: undefined,
+          isCorrect: undefined,
+        };
+      });
 
       const session: Session = {
         id: sessionId,
@@ -161,9 +142,6 @@ Formato esperado:
       currentQuestionIndex: nextIndex,
       completed: isSessionCompleted,
     };
-
-    // Persistir atualização no storage seria aqui
-    // await window.storage.set(`session:${currentSession.id}`, JSON.stringify(updatedSession))
 
     setCurrentSession(updatedSession);
 
@@ -256,8 +234,8 @@ Formato esperado:
               <Brain className="h-6 w-6 text-black" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">Assistente de Estudos</h2>
-              <p className="text-xs text-gray-400">Gere Suas Questões para Estudo</p>
+              <h2 className="text-sm font-semibold text-white">Quiz AI</h2>
+              <p className="text-xs text-gray-400">Gerador de questões</p>
             </div>
           </div>
         </div>
