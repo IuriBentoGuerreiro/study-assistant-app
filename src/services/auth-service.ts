@@ -1,5 +1,6 @@
 import { api } from "../lib/api";
 import Cookies from "js-cookie";
+import { UserResponse } from "../types/UserResponse";
 
 export type LoginRequest = {
   username: string;

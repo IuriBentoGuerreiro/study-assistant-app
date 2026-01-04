@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Loader2, Send, Sparkles, Brain, RotateCcw } from "lucide-react";
 import { api } from "@/src/lib/api";
+import { UserResponse } from "@/src/types/UserResponse";
 
 type Question = {
   id: string;
@@ -43,37 +44,41 @@ export default function AIQuizChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-const generateQuestions = async (topic: string) => {
-  setIsGenerating(true);
-  
-  try {
-    const response = await api.post('/api/ia/gerar', topic, {
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
+  const generateQuestions = async (topic: string) => {
+    setIsGenerating(true);
 
-    const questionsData: Array<{
-      statement: string;
-      options: string[];
-      correctAnswerIndex: number;
-    }> = response.data;
+    const { data: responseMe } = await api.get<UserResponse>(
+      "/auth/me",
+    );
+
+    sessionStorage.setItem("userId", String(responseMe.id))
+
+    const userId = sessionStorage.getItem("userId")
+
+    try {
+      const response = await api.post(
+        `/session/generateIa?userId=${userId}`,
+        { prompt },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const questionsData = Array.isArray(response.data?.questions)
+        ? response.data.questions
+        : [];
 
       const sessionId = crypto.randomUUID();
-      const questions: Question[] = questionsData.map((q, idx) => {
-        const optionsText = q.options
-          .map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`)
-          .join("\n");
-        
-        const correctLetter = String.fromCharCode(65 + q.correctAnswerIndex);
-        
-        return {
-          id: `${sessionId}-q${idx + 1}`,
-          question: `${q.statement}\n\n${optionsText} `,
-          userAnswer: undefined,
-          isCorrect: undefined,
-        };
-      });
+
+      const questions: Question[] = questionsData.map((q:any, idx:number) => ({
+        id: `${sessionId}-q${idx + 1}`,
+        question: `${q.statement}\n\n${q.options.join("\n")}`,
+        userAnswer: undefined,
+        isCorrect: undefined,
+        correctAnswerIndex: q.correctAnswerIndex ?? undefined,
+      }));
 
       const session: Session = {
         id: sessionId,
@@ -120,10 +125,10 @@ const generateQuestions = async (topic: string) => {
     if (!currentSession) return;
 
     const currentQuestion = currentSession.questions[currentSession.currentQuestionIndex];
-    
+
     const correctAnswerMatch = currentQuestion.question.match(/Resposta correta: ([A-D])/);
     const correctAnswer = correctAnswerMatch ? correctAnswerMatch[1] : "";
-    
+
     const isCorrect = answer.toUpperCase().trim() === correctAnswer;
 
     const updatedQuestions = [...currentSession.questions];
@@ -239,7 +244,7 @@ const generateQuestions = async (topic: string) => {
             </div>
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-4">
           <button
             onClick={resetChat}
@@ -261,7 +266,7 @@ const generateQuestions = async (topic: string) => {
                   Questão {currentSession.currentQuestionIndex + 1}/10
                 </span>
                 <div className="h-2 flex-1 ml-3 rounded-full bg-white/10">
-                  <div 
+                  <div
                     className="h-full rounded-full bg-white transition-all duration-300"
                     style={{ width: `${((currentSession.currentQuestionIndex + 1) / 10) * 100}%` }}
                   />
@@ -306,15 +311,14 @@ const generateQuestions = async (topic: string) => {
                     </div>
                   )}
                   <div
-                    className={`rounded-2xl p-4 shadow-lg transition-all ${
-                      msg.sender === "user"
-                        ? "rounded-tr-none bg-white text-black"
-                        : msg.type === "result"
+                    className={`rounded-2xl p-4 shadow-lg transition-all ${msg.sender === "user"
+                      ? "rounded-tr-none bg-white text-black"
+                      : msg.type === "result"
                         ? "rounded-tl-none border-2 border-white bg-black/40 text-white"
                         : msg.type === "question"
-                        ? "rounded-tl-none border-l-4 border-white bg-black/40 text-white"
-                        : "rounded-tl-none border border-white/10 bg-black/40 text-white"
-                    }`}
+                          ? "rounded-tl-none border-l-4 border-white bg-black/40 text-white"
+                          : "rounded-tl-none border border-white/10 bg-black/40 text-white"
+                      }`}
                   >
                     <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
                       {msg.text}
