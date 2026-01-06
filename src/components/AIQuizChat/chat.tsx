@@ -1,8 +1,15 @@
 "use client";
+
 import { useState, useRef, useEffect } from "react";
 import { Loader2, Send, Sparkles, Brain, RotateCcw } from "lucide-react";
 import { api } from "@/src/lib/api";
 import { UserResponse } from "@/src/types/UserResponse";
+
+type SessionListItem = {
+  id: string;
+  sessionName: string;
+  createdAt: string;
+};
 
 type Question = {
   id: string;
@@ -40,6 +47,10 @@ export default function AIQuizChat() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const [sessions, setSessions] = useState<SessionListItem[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -121,6 +132,24 @@ export default function AIQuizChat() {
       setIsGenerating(false);
     }
   };
+
+  const loadSessions = async () => {
+    try {
+      const userId = sessionStorage.getItem("userId")
+
+      const { data } = await api.get<SessionListItem[]>(
+        `/session/${userId}`
+      );
+
+      setSessions(data);
+    } catch (err) {
+      console.error("Erro ao carregar sessões", err);
+    }
+  };
+
+  useEffect(() => {
+    loadSessions();
+  }, []);
 
   const processAnswer = async (answer: string) => {
     if (!currentSession) return;
@@ -250,7 +279,7 @@ export default function AIQuizChat() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
           <button
             onClick={resetChat}
             className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition hover:bg-white/5"
@@ -258,6 +287,23 @@ export default function AIQuizChat() {
             <RotateCcw className="h-4 w-4" />
             <span>Nova sessão</span>
           </button>
+
+          {sessions.map((session) => (
+            <button
+              key={session.id}
+              onClick={() => {
+                setActiveSessionId(session.id);
+              }}
+              className={`w-full rounded-xl px-4 py-3 text-left text-sm transition
+      ${activeSessionId === session.id
+                  ? "bg-white text-black"
+                  : "border border-white/10 bg-black/40 text-white hover:bg-white/5"
+                }`}
+            >
+              <p className="font-medium truncate">{session.sessionName || "Chat Sem Título"}</p>
+            </button>
+          ))}
+
         </div>
 
         <div className="p-4 border-t border-white/10">
