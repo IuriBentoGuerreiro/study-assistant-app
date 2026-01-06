@@ -9,6 +9,7 @@ type Question = {
   question: string;
   userAnswer?: string;
   isCorrect?: boolean;
+  correctAnswerIndex?: number;
 };
 
 type Session = {
@@ -58,7 +59,7 @@ export default function AIQuizChat() {
     try {
       const response = await api.post(
         `/session/generateIa?userId=${userId}`,
-        { prompt },
+        { prompt: topic },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -72,12 +73,12 @@ export default function AIQuizChat() {
 
       const sessionId = crypto.randomUUID();
 
-      const questions: Question[] = questionsData.map((q:any, idx:number) => ({
+      const questions: Question[] = questionsData.map((q: any, idx: number) => ({
         id: `${sessionId}-q${idx + 1}`,
         question: `${q.statement}\n\n${q.options.join("\n")}`,
         userAnswer: undefined,
         isCorrect: undefined,
-        correctAnswerIndex: q.correctAnswerIndex ?? undefined,
+        correctAnswerIndex: q.correctAnswerIndex,
       }));
 
       const session: Session = {
@@ -126,10 +127,14 @@ export default function AIQuizChat() {
 
     const currentQuestion = currentSession.questions[currentSession.currentQuestionIndex];
 
-    const correctAnswerMatch = currentQuestion.question.match(/Resposta correta: ([A-D])/);
-    const correctAnswer = correctAnswerMatch ? correctAnswerMatch[1] : "";
+    if (!currentQuestion.correctAnswerIndex) return;
 
-    const isCorrect = answer.toUpperCase().trim() === correctAnswer;
+    const correctLetter =
+      String.fromCharCode(64 + currentQuestion.correctAnswerIndex);
+
+    const userLetter = answer.toUpperCase().trim();
+
+    const isCorrect = userLetter === correctLetter;
 
     const updatedQuestions = [...currentSession.questions];
     updatedQuestions[currentSession.currentQuestionIndex] = {
@@ -153,8 +158,8 @@ export default function AIQuizChat() {
     const feedbackMessage: Message = {
       id: crypto.randomUUID(),
       text: isCorrect
-        ? `✅ Correto! A resposta é ${correctAnswer}.`
-        : `❌ Incorreto. A resposta correta é ${correctAnswer}.`,
+        ? `✅ Correto! A resposta é ${correctLetter}.`
+        : `❌ Incorreto. A resposta correta é ${correctLetter}.`,
       sender: "bot",
       type: "result",
     };
