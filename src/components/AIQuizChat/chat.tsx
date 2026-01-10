@@ -128,10 +128,10 @@ export default function AIQuizChat() {
 
   const loadSessions = async () => {
     try {
-      const userId = sessionStorage.getItem("userId")
+      const userId = Number(sessionStorage.getItem("userId"));
 
       const { data } = await api.get<SessionListItem[]>(
-        `/session/4`
+        `/session/${userId}`
       );
 
       setSessions(data);
@@ -147,75 +147,95 @@ export default function AIQuizChat() {
   const processAnswer = async (answer: string) => {
     if (!currentSession) return;
 
-    const currentQuestion = currentSession.questions[currentSession.currentQuestionIndex];
+    const currentQuestion =
+      currentSession.questions[currentSession.currentQuestionIndex];
 
-    if (!currentQuestion.correctAnswerIndex) return;
+    if (currentQuestion.correctAnswerIndex == null) return;
 
-    const correctLetter =
-      String.fromCharCode(64 + currentQuestion.correctAnswerIndex);
+    const correctLetter = String.fromCharCode(
+      65 + currentQuestion.correctAnswerIndex
+    );
 
     const userLetter = answer.toUpperCase().trim();
+    const validAnswers = ["A", "B", "C", "D"];
+
+    if (!validAnswers.includes(userLetter)) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          text: "❗ Resposta inválida. Digite apenas A, B, C ou D.",
+          sender: "bot",
+          type: "normal",
+        },
+      ]);
+      return;
+    }
 
     const isCorrect = userLetter === correctLetter;
 
     const updatedQuestions = [...currentSession.questions];
     updatedQuestions[currentSession.currentQuestionIndex] = {
       ...currentQuestion,
-      userAnswer: answer,
+      userAnswer: userLetter,
       isCorrect,
     };
 
     const nextIndex = currentSession.currentQuestionIndex + 1;
-    const isSessionCompleted = nextIndex >= currentSession.questions.length;
+    const completed = nextIndex >= updatedQuestions.length;
 
     const updatedSession: Session = {
       ...currentSession,
       questions: updatedQuestions,
       currentQuestionIndex: nextIndex,
-      completed: isSessionCompleted,
+      completed,
     };
 
     setCurrentSession(updatedSession);
 
-    const feedbackMessage: Message = {
-      id: crypto.randomUUID(),
-      text: isCorrect
-        ? `✅ Correto! A resposta é ${correctLetter}.`
-        : `❌ Incorreto. A resposta correta é ${correctLetter}.`,
-      sender: "bot",
-      type: "result",
-    };
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        text: isCorrect
+          ? `✅ Correto! A resposta é ${correctLetter}.`
+          : `❌ Incorreto. A resposta correta é ${correctLetter}.`,
+        sender: "bot",
+        type: "result",
+      },
+    ]);
 
-    setMessages((prev) => [...prev, feedbackMessage]);
-
-    if (isSessionCompleted) {
+    if (completed) {
       const correctCount = updatedQuestions.filter((q) => q.isCorrect).length;
       const percentage = (correctCount / updatedQuestions.length) * 100;
 
-      const finalMessage: Message = {
-        id: crypto.randomUUID(),
-        text: `🎉 Parabéns! Você completou o questionário!\n\n📊 Resultado:\n✅ Acertos: ${correctCount}/10\n📈 Aproveitamento: ${percentage.toFixed(0)}%\n\nEnvie outro texto para começar um novo questionário!`,
-        sender: "bot",
-        type: "result",
-      };
-
-      setMessages((prev) => [...prev, finalMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          text: `🎉 Questionário finalizado!\n\n✅ Acertos: ${correctCount}/10\n📈 Aproveitamento: ${percentage.toFixed(
+            0
+          )}%\n\nEnvie outro texto para iniciar um novo quiz.`,
+          sender: "bot",
+          type: "result",
+        },
+      ]);
     } else {
-      const nextQuestionMessage: Message = {
-        id: crypto.randomUUID(),
-        text: `Questão ${nextIndex + 1} de 10:`,
-        sender: "bot",
-        type: "normal",
-      };
-
-      const questionMessage: Message = {
-        id: crypto.randomUUID(),
-        text: updatedSession.questions[nextIndex].question,
-        sender: "bot",
-        type: "question",
-      };
-
-      setMessages((prev) => [...prev, nextQuestionMessage, questionMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          text: `Questão ${nextIndex + 1} de 10:`,
+          sender: "bot",
+          type: "normal",
+        },
+        {
+          id: crypto.randomUUID(),
+          text: updatedQuestions[nextIndex].question,
+          sender: "bot",
+          type: "question",
+        },
+      ]);
     }
   };
 
