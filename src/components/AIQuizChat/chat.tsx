@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
@@ -132,7 +133,7 @@ export default function AIQuizChat() {
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: Brain, label: "Chat", path: "/chat", active: true },
+    { icon: MessageSquare, label: "Chat", path: "/chat", active: true },
     { icon: BookOpen, label: "Sessões", path: "/sessions" },
     { icon: Settings, label: "Configurações", path: "/settings" },
   ];
@@ -220,7 +221,7 @@ export default function AIQuizChat() {
       <div className="flex-1 overflow-y-auto p-6">
         {/* INPUT */}
         {!currentSession && (
-          <div className="max-w-2xl mx-auto mb-6 flex gap-3">
+          <div className="max-w-2xl mx-auto mb-6 flex gap-3 text-gray-900">
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}

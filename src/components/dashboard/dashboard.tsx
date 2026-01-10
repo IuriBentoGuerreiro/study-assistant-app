@@ -10,7 +10,8 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X
+  X,
+  Brain
 } from "lucide-react";
 
 type SessionListItem = {
@@ -68,15 +69,21 @@ export default function DashboardView() {
       >
         <div className="flex flex-col h-full">
           {/* Logo/Header */}
-          <div className="flex items-center justify-between p-6 border-b">
-            <h1 className="text-xl font-bold text-gray-800">StudyApp</h1>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-gray-600 hover:text-gray-800"
-            >
-              <X className="w-6 h-6" />
+                    <div className="p-6 border-b flex justify-between items-center">
+            <div className="flex gap-3 items-center">
+              <div className="bg-blue-600 p-2 rounded-lg">
+                <Brain className="text-white" />
+              </div>
+              <div>
+                <h1 className="font-bold text-gray-800">Quiz AI</h1>
+                <p className="text-xs text-gray-700">Gerador de questões</p>
+              </div>
+            </div>
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
+              <X />
             </button>
           </div>
+
 
           {/* Menu Items */}
           <nav className="flex-1 p-4 space-y-2">
