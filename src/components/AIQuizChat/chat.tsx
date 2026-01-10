@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Loader2, Send, Sparkles, Brain, RotateCcw } from "lucide-react";
+import { Loader2, Send, Sparkles, Brain, RotateCcw, Menu, X, LayoutDashboard, BookOpen, Settings, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 
 type SessionListItem = {
@@ -34,6 +35,7 @@ type Message = {
 };
 
 export default function AIQuizChat() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: crypto.randomUUID(),
@@ -49,7 +51,7 @@ export default function AIQuizChat() {
 
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -274,92 +276,151 @@ export default function AIQuizChat() {
     setInput("");
   };
 
+  const menuItems = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+    { icon: Brain, label: "Chat", path: "/chat", active: true },
+    { icon: BookOpen, label: "Sessões", path: "/sessions" },
+    { icon: Settings, label: "Configurações", path: "/settings" },
+  ];
+
   return (
-    <div className="flex h-screen bg-black">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <div className="hidden md:flex w-64 flex-col border-r border-white/10 bg-black/40">
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-white p-2">
-              <Brain className="h-6 w-6 text-black" />
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo/Header */}
+          <div className="flex items-center justify-between p-6 border-b">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-blue-600 p-2">
+                <Brain className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Quiz AI</h1>
+                <p className="text-xs text-gray-500">Gerador de questões</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm font-semibold text-white">Quiz AI</h2>
-              <p className="text-xs text-gray-400">Gerador de questões</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          <button
-            onClick={resetChat}
-            className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition hover:bg-white/5"
-          >
-            <RotateCcw className="h-4 w-4" />
-            <span>Nova sessão</span>
-          </button>
-
-          {sessions.map((session) => (
             <button
-              key={session.id}
-              onClick={() => {
-                setActiveSessionId(session.id);
-              }}
-              className={`w-full rounded-xl px-4 py-3 text-left text-sm transition
-      ${activeSessionId === session.id
-                  ? "bg-white text-black"
-                  : "border border-white/10 bg-black/40 text-white hover:bg-white/5"
-                }`}
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden text-gray-600 hover:text-gray-800"
             >
-              <p className="font-medium truncate">{session.sessionName || "Chat Sem Título"}</p>
+              <X className="w-6 h-6" />
             </button>
-          ))}
+          </div>
 
-        </div>
+          {/* Menu Items */}
+          <nav className="p-4 space-y-2 border-b">
+            {menuItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => router.push(item.path)}
+                className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${
+                  item.active
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <item.icon className="w-5 h-5 mr-3" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            ))}
+          </nav>
 
-        <div className="p-4 border-t border-white/10">
-          <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-            <p className="text-xs text-gray-400">
-              Sessão ativa
-            </p>
+          {/* Sessions List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <button
+              onClick={resetChat}
+              className="flex w-full items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>Nova sessão</span>
+            </button>
+
+            {sessions.map((session) => (
+              <button
+                key={session.id}
+                onClick={() => {
+                  setActiveSessionId(session.id);
+                }}
+                className={`w-full rounded-lg px-4 py-3 text-left text-sm transition ${
+                  activeSessionId === session.id
+                    ? "bg-blue-50 text-blue-600 border border-blue-200"
+                    : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <p className="font-medium truncate">{session.sessionName || "Chat Sem Título"}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {new Date(session.createdAt).toLocaleDateString()}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          {/* Progress Footer */}
+          <div className="p-4 border-t">
             {currentSession && !currentSession.completed && (
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-white">
-                  Questão {currentSession.currentQuestionIndex + 1}/10
-                </span>
-                <div className="h-2 flex-1 ml-3 rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-white transition-all duration-300"
-                    style={{ width: `${((currentSession.currentQuestionIndex + 1) / 10) * 100}%` }}
-                  />
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <p className="text-xs text-gray-600 mb-2">Sessão ativa</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-800">
+                    Questão {currentSession.currentQuestionIndex + 1}/10
+                  </span>
+                  <div className="h-2 flex-1 ml-3 rounded-full bg-gray-200">
+                    <div
+                      className="h-full rounded-full bg-blue-600 transition-all duration-300"
+                      style={{ width: `${((currentSession.currentQuestionIndex + 1) / 10) * 100}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             )}
+            
+            <button className="flex items-center w-full px-4 py-3 mt-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <LogOut className="w-5 h-5 mr-3" />
+              <span className="font-medium">Sair</span>
+            </button>
           </div>
         </div>
       </div>
 
+      {/* Overlay para mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Chat Area */}
-      <div className="flex flex-1 flex-col">
-        {/* Header Mobile */}
-        <div className="flex items-center justify-between border-b border-white/10 bg-black/40 p-4 md:hidden">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-white p-2">
-              <Brain className="h-5 w-5 text-black" />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden mr-4 text-gray-600 hover:text-gray-800"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <h2 className="text-xl font-bold text-gray-800">Chat Quiz</h2>
             </div>
-            <div>
-              <h2 className="text-sm font-semibold text-white">Quiz AI</h2>
-            </div>
+            
+            {currentSession && !currentSession.completed && (
+              <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-200">
+                <span className="text-sm font-medium">
+                  Questão {currentSession.currentQuestionIndex + 1}/10
+                </span>
+              </div>
+            )}
           </div>
-          {currentSession && !currentSession.completed && (
-            <div className="rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs font-medium text-white">
-              {currentSession.currentQuestionIndex + 1}/10
-            </div>
-          )}
-        </div>
+        </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50">
           <div className="mx-auto max-w-3xl space-y-6">
             {messages.map((msg) => (
               <div
@@ -368,26 +429,27 @@ export default function AIQuizChat() {
               >
                 <div className="flex max-w-[85%] items-start gap-3">
                   {msg.sender === "bot" && (
-                    <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-white">
-                      <Sparkles className="h-4 w-4 text-black" />
+                    <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 shadow-sm">
+                      <Sparkles className="h-4 w-4 text-white" />
                     </div>
                   )}
                   <div
-                    className={`rounded-2xl p-4 shadow-lg transition-all ${msg.sender === "user"
-                      ? "rounded-tr-none bg-white text-black"
-                      : msg.type === "result"
-                        ? "rounded-tl-none border-2 border-white bg-black/40 text-white"
+                    className={`rounded-2xl p-4 shadow-sm transition-all ${
+                      msg.sender === "user"
+                        ? "rounded-tr-none bg-blue-600 text-white"
+                        : msg.type === "result"
+                        ? "rounded-tl-none bg-white border-2 border-blue-200 text-gray-800"
                         : msg.type === "question"
-                          ? "rounded-tl-none border-l-4 border-white bg-black/40 text-white"
-                          : "rounded-tl-none border border-white/10 bg-black/40 text-white"
-                      }`}
+                        ? "rounded-tl-none border-l-4 border-blue-600 bg-white text-gray-800"
+                        : "rounded-tl-none bg-white border border-gray-200 text-gray-800"
+                    }`}
                   >
                     <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
                       {msg.text}
                     </p>
                   </div>
                   {msg.sender === "user" && (
-                    <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white">
+                    <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 text-xs font-semibold text-gray-700">
                       U
                     </div>
                   )}
@@ -398,16 +460,16 @@ export default function AIQuizChat() {
             {isGenerating && (
               <div className="flex justify-start">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white">
-                    <Sparkles className="h-4 w-4 text-black" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 shadow-sm">
+                    <Sparkles className="h-4 w-4 text-white" />
                   </div>
-                  <div className="flex items-center gap-3 rounded-2xl rounded-tl-none border border-white/10 bg-black/40 p-4 shadow-md">
+                  <div className="flex items-center gap-3 rounded-2xl rounded-tl-none bg-white border border-gray-200 p-4 shadow-sm">
                     <div className="flex gap-1">
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-white" style={{ animationDelay: "0ms" }}></div>
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-white" style={{ animationDelay: "150ms" }}></div>
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-white" style={{ animationDelay: "300ms" }}></div>
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-blue-600" style={{ animationDelay: "0ms" }}></div>
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-blue-600" style={{ animationDelay: "150ms" }}></div>
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-blue-600" style={{ animationDelay: "300ms" }}></div>
                     </div>
-                    <span className="text-sm text-gray-400">Gerando questões</span>
+                    <span className="text-sm text-gray-600">Gerando questões</span>
                   </div>
                 </div>
               </div>
@@ -417,7 +479,7 @@ export default function AIQuizChat() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-white/10 bg-black/40 p-4 md:p-6">
+        <div className="border-t border-gray-200 bg-white p-4 md:p-6">
           <div className="mx-auto max-w-3xl">
             <div className="flex gap-3">
               <input
@@ -431,12 +493,12 @@ export default function AIQuizChat() {
                     ? "Digite um texto para gerar questões..."
                     : "Digite sua resposta (A, B, C ou D)..."
                 }
-                className="flex-1 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder-gray-500 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isGenerating}
-                className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-medium text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
               >
                 {isGenerating ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

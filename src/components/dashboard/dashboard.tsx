@@ -1,107 +1,218 @@
 "use client";
-
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/src/lib/api";
+import { DashboardDTO } from "@/src/types/DashboardDTO";
+import { 
+  LayoutDashboard, 
+  MessageSquare, 
+  BookOpen, 
+  Settings, 
+  LogOut,
+  Menu,
+  X
+} from "lucide-react";
 
-type DashboardDTO = {
-  questionsGenerated: number;
-  correctQuestions: number;
-  accuracyPercentage: number;
+type SessionListItem = {
+  id: string;
+  sessionName: string;
+  createdAt: string;
 };
 
 export default function DashboardView() {
   const router = useRouter();
   const [dashboard, setDashboard] = useState<DashboardDTO | null>(null);
+  const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleClickChat = () => {
     router.push("/chat");
   };
 
   useEffect(() => {
-    const fetchDashboard = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await api.get<DashboardDTO>("/dashboard");
-        setDashboard(data);
+        const dashboardResponse = await api.get("/dashboard");
+        setDashboard(dashboardResponse.data);
+
+        const userId = Number(sessionStorage.getItem("userId"));
+        if (userId) {
+          const sessionsResponse = await api.get(`/session/${userId}`);
+          setSessions(sessionsResponse.data);
+        }
       } catch (error) {
-        console.error("Erro ao carregar dashboard", error);
+        console.error("Erro ao carregar dados do dashboard", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboard();
+    fetchData();
   }, []);
 
+  const menuItems = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", active: true },
+    { icon: MessageSquare, label: "Chat", path: "/chat", active: false },
+    { icon: BookOpen, label: "Sessões", path: "/sessions", active: false },
+    { icon: Settings, label: "Configurações", path: "/settings", active: false },
+  ];
+
   return (
-    <div className="min-h-screen bg-black text-white flex">
-      <aside className="w-64 border-r border-white/10 bg-black/60 backdrop-blur-xl p-6 hidden md:flex flex-col">
-        <h1 className="text-xl font-semibold tracking-tight mb-10">
-          Assistente de Estudos
-        </h1>
-
-        <nav className="flex-1 space-y-2 text-sm">
-          <button className="w-full text-left rounded-lg px-3 py-2 bg-white/10 hover:bg-white/20 transition">
-            Dashboard
-          </button>
-        </nav>
-
-        <button
-          onClick={() => router.push("/login")}
-          className="mt-6 rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10 transition"
-        >
-          Sair
-        </button>
-      </aside>
-
-      <main className="flex-1 p-6 md:p-10">
-        <header className="flex items-center justify-between mb-10">
-          <div>
-            <h2 className="text-2xl font-semibold">Dashboard</h2>
-            <p className="text-sm text-gray-400">
-              Organize seus estudos com inteligência artificial
-            </p>
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo/Header */}
+          <div className="flex items-center justify-between p-6 border-b">
+            <h1 className="text-xl font-bold text-gray-800">StudyApp</h1>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden text-gray-600 hover:text-gray-800"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-4">
+          {/* Menu Items */}
+          <nav className="flex-1 p-4 space-y-2">
+            {menuItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => router.push(item.path)}
+                className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${
+                  item.active
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <item.icon className="w-5 h-5 mr-3" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          {/* Logout Button */}
+          <div className="p-4 border-t">
+            <button className="flex items-center w-full px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <LogOut className="w-5 h-5 mr-3" />
+              <span className="font-medium">Sair</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Overlay para mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden mr-4 text-gray-600 hover:text-gray-800"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
+            </div>
+            
             <button
               onClick={handleClickChat}
-              className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/10 transition"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
             >
-              Novo Estudo
+              <MessageSquare className="w-5 h-5 mr-2" />
+              Ir para Chat
             </button>
-            <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center text-sm">
-              IA
-            </div>
           </div>
         </header>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <h3 className="text-sm text-gray-400">Questões Geradas</h3>
-            <p className="mt-2 text-3xl font-semibold">
-              {loading ? "--" : dashboard?.questionsGenerated}
-            </p>
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {/* MÉTRICAS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Questões Geradas
+              </h3>
+              <p className="text-3xl font-bold text-gray-900">
+                {loading ? "--" : dashboard?.questionsGenerated}
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Acertos
+              </h3>
+              <p className="text-3xl font-bold text-green-600">
+                {loading ? "--" : dashboard?.correctQuestions}
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Porcentagem de Acertos
+              </h3>
+              <p className="text-3xl font-bold text-blue-600">
+                {loading ? "--" : `${dashboard?.accuracyPercentage.toFixed(1)}%`}
+              </p>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <h3 className="text-sm text-gray-400">Acertos</h3>
-            <p className="mt-2 text-3xl font-semibold">
-              {loading ? "--" : dashboard?.correctQuestions}
-            </p>
-          </div>
+          {/* SESSÕES */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="p-6 border-b">
+              <h3 className="text-xl font-bold text-gray-800">
+                Sessões de Estudo
+              </h3>
+            </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <h3 className="text-sm text-gray-400">Porcentagem de Acertos</h3>
-            <p className="mt-2 text-3xl font-semibold">
-              {loading
-                ? "--"
-                : `${dashboard?.accuracyPercentage.toFixed(1)}%`}
-            </p>
+            <div className="p-6">
+              {loading ? (
+                <p className="text-gray-500 text-center py-8">
+                  Carregando sessões...
+                </p>
+              ) : sessions.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  Nenhuma sessão encontrada
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      onClick={() => router.push(`/session/${session.id}`)}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center">
+                        <BookOpen className="w-5 h-5 text-blue-600 mr-3" />
+                        <span className="font-medium text-gray-800">
+                          {session.sessionName}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {new Date(session.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </section>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
