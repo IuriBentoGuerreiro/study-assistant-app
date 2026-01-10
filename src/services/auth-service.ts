@@ -27,8 +27,6 @@ export async function login(data: LoginRequest): Promise<void> {
     secure: process.env.NODE_ENV === "production",
   });
 
-  api.defaults.headers.common.Authorization = `Bearer ${token}`;
-
   const { data: responseMe } = await api.get<UserResponse>("/auth/me");
 
   sessionStorage.setItem("userId", String(responseMe.id));
