@@ -237,22 +237,36 @@ export default function AIQuizChat() {
 
       {/* MAIN */}
       <div className="flex-1 overflow-y-auto p-6">
+
         {/* INPUT */}
         {!currentSession && (
-          <div className="max-w-2xl mx-auto mb-6 flex gap-3 text-gray-900">
-            <input
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="Digite um texto para gerar questões..."
-              className="flex-1 border rounded-lg px-4 py-3"
-            />
-            <button
-              onClick={generateQuestions}
-              disabled={isGenerating}
-              className="bg-blue-600 text-white px-6 rounded-lg"
-            >
-              {isGenerating ? <Loader2 className="animate-spin" /> : "Gerar"}
-            </button>
+          <div className="max-w-2xl mx-auto mb-6 flex flex-col gap-6 text-gray-900">
+            <div className="flex gap-3">
+              <input
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Digite um texto para gerar questões..."
+                className="flex-1 border rounded-lg px-4 py-3"
+              />
+              <button
+                onClick={generateQuestions}
+                disabled={isGenerating}
+                className="bg-blue-600 text-white px-6 rounded-lg"
+              >
+                {isGenerating ? <Loader2 className="animate-spin" /> : "Gerar"}
+              </button>
+            </div>
+
+            {/* TEXTO DE BOAS-VINDAS */}
+            <div className="mt-50 text-center text-gray-900">
+              <p className="text-2xl font-semibold">Bem-vindo ao Quiz AI!</p>
+              <p className="mt-2 text-lg">
+                Digite um tema no campo acima e gere suas questões personalizadas.
+                Você também pode selecionar uma sessão existente na barra lateral
+                para revisar suas questões anteriores.
+              </p>
+            </div>
+
           </div>
         )}
 
