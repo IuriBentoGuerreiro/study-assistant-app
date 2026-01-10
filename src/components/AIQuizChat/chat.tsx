@@ -97,6 +97,21 @@ export default function AIQuizChat() {
     }
   };
 
+  const loadSessionQuestions = async (sessionId: string) => {
+    try {
+      const { data } = await api.get<Question[]>(`/question/${sessionId}`);
+
+      setCurrentSession({
+        id: sessionId,
+        topic: "", // você pode salvar o nome do tópico se quiser
+        questions: data,
+        completed: data.every(q => q.userAnswerIndex !== undefined),
+      });
+    } catch (err) {
+      console.error("Erro ao carregar questões da sessão", err);
+    }
+  };
+
   const handleAnswer = async (questionId: string, optionIndex: number) => {
     if (!currentSession) return;
 
@@ -189,7 +204,10 @@ export default function AIQuizChat() {
             {sessions.map((s) => (
               <button
                 key={s.id}
-                onClick={() => setActiveSessionId(s.id)}
+                onClick={() => {
+                  setActiveSessionId(s.id);
+                  loadSessionQuestions(s.id);
+                }}
                 className={`w-full text-left text-gray-800 px-4 py-3 rounded-lg 
       border border-gray-300
       ${activeSessionId === s.id
