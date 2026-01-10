@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Loader2, Send, Sparkles, Brain, RotateCcw } from "lucide-react";
 import { api } from "@/src/lib/api";
-import { UserResponse } from "@/src/types/UserResponse";
 
 type SessionListItem = {
   id: string;
@@ -59,13 +58,7 @@ export default function AIQuizChat() {
   const generateQuestions = async (topic: string) => {
     setIsGenerating(true);
 
-    const { data: responseMe } = await api.get<UserResponse>(
-      "/auth/me",
-    );
-
-    sessionStorage.setItem("userId", String(responseMe.id))
-
-    const userId = sessionStorage.getItem("userId")
+    const userId = Number(sessionStorage.getItem("userId"));
 
     try {
       const response = await api.post(
@@ -138,7 +131,7 @@ export default function AIQuizChat() {
       const userId = sessionStorage.getItem("userId")
 
       const { data } = await api.get<SessionListItem[]>(
-        `/session/${userId}`
+        `/session/4`
       );
 
       setSessions(data);

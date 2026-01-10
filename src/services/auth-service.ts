@@ -21,13 +21,15 @@ export async function login(data: LoginRequest): Promise<void> {
 
   const token = response.accessToken;
 
-  // ✅ Salva no cookie
   Cookies.set(COOKIE_NAME, token, {
     path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
 
-  // ✅ SETA O AUTHORIZATION GLOBAL
-  api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  api.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+  const { data: responseMe } = await api.get<UserResponse>("/auth/me");
+
+  sessionStorage.setItem("userId", String(responseMe.id));
 }
