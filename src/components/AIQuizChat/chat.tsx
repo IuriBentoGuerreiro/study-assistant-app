@@ -77,8 +77,8 @@ export default function AIQuizChat() {
 
       const sessionId = crypto.randomUUID();
 
-      const questions: Question[] = questionsData.map((q: any, idx: number) => ({
-        id: `${sessionId}-q${idx + 1}`,
+      const questions: Question[] = questionsData.map((q: any) => ({
+        id: q.id,
         question: `${q.statement}\n\n${q.options.join("\n")}`,
         userAnswer: undefined,
         isCorrect: undefined,
@@ -152,25 +152,27 @@ export default function AIQuizChat() {
 
     if (currentQuestion.correctAnswerIndex == null) return;
 
+    const userLetter = answer.toUpperCase().trim();
+    const optionIndex = userLetter.charCodeAt(0) - 65;
+
+    if (optionIndex < 0 || optionIndex > 3) {
+      setMessages((prev) => [...prev, {
+        id: crypto.randomUUID(),
+        text: "❗ Resposta inválida. Digite apenas A, B, C ou D.",
+        sender: "bot",
+        type: "normal",
+      }]);
+      return;
+    }
+
+    await api.put("/question/user/response", {
+      questionId: currentQuestion.id,
+      selectedOptionIndex: optionIndex,
+    });
+
     const correctLetter = String.fromCharCode(
       65 + currentQuestion.correctAnswerIndex
     );
-
-    const userLetter = answer.toUpperCase().trim();
-    const validAnswers = ["A", "B", "C", "D"];
-
-    if (!validAnswers.includes(userLetter)) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          text: "❗ Resposta inválida. Digite apenas A, B, C ou D.",
-          sender: "bot",
-          type: "normal",
-        },
-      ]);
-      return;
-    }
 
     const isCorrect = userLetter === correctLetter;
 
@@ -184,14 +186,12 @@ export default function AIQuizChat() {
     const nextIndex = currentSession.currentQuestionIndex + 1;
     const completed = nextIndex >= updatedQuestions.length;
 
-    const updatedSession: Session = {
+    setCurrentSession({
       ...currentSession,
       questions: updatedQuestions,
       currentQuestionIndex: nextIndex,
       completed,
-    };
-
-    setCurrentSession(updatedSession);
+    });
 
     setMessages((prev) => [
       ...prev,
@@ -213,9 +213,7 @@ export default function AIQuizChat() {
         ...prev,
         {
           id: crypto.randomUUID(),
-          text: `🎉 Questionário finalizado!\n\n✅ Acertos: ${correctCount}/10\n📈 Aproveitamento: ${percentage.toFixed(
-            0
-          )}%\n\nEnvie outro texto para iniciar um novo quiz.`,
+          text: `🎉 Questionário finalizado!\n\n✅ Acertos: ${correctCount}/10\n📈 Aproveitamento: ${percentage.toFixed(0)}%`,
           sender: "bot",
           type: "result",
         },
