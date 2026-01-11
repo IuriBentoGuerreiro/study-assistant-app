@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
+import Select from "../ui/select";
 
 type SessionListItem = {
   id: string;
@@ -41,6 +42,9 @@ export default function AIQuizChat() {
   const router = useRouter();
 
   const [topic, setTopic] = useState("");
+  const [quantity, setQuantity] = useState<string>("");
+  const [banca, setBanca] = useState<string>("");
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
 
@@ -69,10 +73,26 @@ export default function AIQuizChat() {
     const userId = Number(sessionStorage.getItem("userId"));
 
     try {
+      const params = new URLSearchParams({
+        userId: userId.toString(),
+      });
+
+      if (banca && banca.trim()) {
+        params.append("banca", banca);
+      }
+
+      if (quantity && quantity.trim()) {
+        params.append("quantidade", quantity);
+      }
+
       const response = await api.post(
-        `/session/generateIa?userId=${userId}`,
-        { prompt: topic },
-        { headers: { "Content-Type": "application/json" } }
+        `/session/generateIa?${params.toString()}`,
+        topic,
+        {
+          headers: {
+            "Content-Type": "text/plain"
+          }
+        }
       );
 
       const questions: Question[] = response.data.questions.map((q: any) => ({
@@ -90,6 +110,8 @@ export default function AIQuizChat() {
       });
 
       setTopic("");
+      setQuantity("");
+      setBanca("");
     } catch (error) {
       console.error("Erro ao gerar questões", error);
     } finally {
@@ -103,7 +125,7 @@ export default function AIQuizChat() {
 
       setCurrentSession({
         id: sessionId,
-        topic: "", // você pode salvar o nome do tópico se quiser
+        topic: "",
         questions: data,
         completed: data.every(q => q.userAnswerIndex !== undefined),
       });
@@ -241,13 +263,39 @@ export default function AIQuizChat() {
         {/* INPUT */}
         {!currentSession && (
           <div className="max-w-2xl mx-auto mb-6 flex flex-col gap-6 text-gray-900">
-            <div className="flex gap-3">
+            {/* Prompt */}
+            <div className="flex gap-3 flex-wrap">
               <input
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="Digite um texto para gerar questões..."
-                className="flex-1 border rounded-lg px-4 py-3"
+                placeholder="Digite um tema para gerar questões..."
+                className="border rounded-lg px-4 py-3"
               />
+              <Select
+                value={quantity}
+                onChange={setQuantity}
+                options={["5", "10", "15", "20"]}
+                placeholder="Quantidade de questões"
+                className="flex-1"
+              />
+              {/* Banca */}
+              <Select
+                value={banca}
+                onChange={setBanca}
+                options={[
+                  "Cespe/CEBRASPE",
+                  "FGV",
+                  "FCC",
+                  "Vunesp",
+                  "IBFC",
+                  "FUNCAB",
+                  "AOCP",
+                  "Quadrix"
+                ]}
+                placeholder="Selecione a banca"
+                className="flex-1"
+              />
+              {/* Botão Gerar */}
               <button
                 onClick={generateQuestions}
                 disabled={isGenerating}
@@ -256,17 +304,14 @@ export default function AIQuizChat() {
                 {isGenerating ? <Loader2 className="animate-spin" /> : "Gerar"}
               </button>
             </div>
-
             {/* TEXTO DE BOAS-VINDAS */}
-            <div className="mt-50 text-center text-gray-900">
+            <div className="mt-10 text-center text-gray-900">
               <p className="text-2xl font-semibold">Bem-vindo ao Quiz AI!</p>
               <p className="mt-2 text-lg">
-                Digite um tema no campo acima e gere suas questões personalizadas.
-                Você também pode selecionar uma sessão existente na barra lateral
-                para revisar suas questões anteriores.
+                Digite um tema, escolha a quantidade de questões e a banca para gerar suas questões personalizadas.
+                Você também pode selecionar uma sessão existente na barra lateral para revisar suas questões anteriores.
               </p>
             </div>
-
           </div>
         )}
 
