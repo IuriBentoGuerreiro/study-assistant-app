@@ -17,6 +17,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/src/lib/api";
 import Select from "../ui/select";
 import Tooltip from "../ui/tooltip";
+import { logout } from "@/src/utils/logout";
 
 type SessionListItem = {
   id: string;
@@ -272,8 +273,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                 key={item.path}
                 onClick={() => router.push(item.path)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${item.active
-                    ? "bg-blue-50 text-blue-600"
-                    : "hover:bg-gray-100 text-gray-600"
+                  ? "bg-blue-50 text-blue-600"
+                  : "hover:bg-gray-100 text-gray-600"
                   }`}
               >
                 <item.icon className="w-5 h-5" />
@@ -312,10 +313,12 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
             ))}
           </div>
 
-          <div className="p-4 border-t">
-            <button className="flex gap-3 items-center text-gray-600">
-              <LogOut />
-              Sair
+          {/* Logout Button */}
+          <div className="p-4 border-t"
+          onClick={logout}>
+            <button className="flex items-center w-full px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <LogOut className="w-5 h-5 mr-3"/>
+              <span className="font-medium">Sair</span>
             </button>
           </div>
         </div>
@@ -357,7 +360,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                   <div className="flex items-center gap-2 mb-2">
                     <label className="text-sm font-medium text-gray-700">Banca</label>
                     <Tooltip content="Selecione a instituição organizadora do concurso. Caso não tenha a banca desejada pode digitar o nome dela e gere as questões normalmente"
-                    position="bottom" 
+                      position="bottom"
                     />
                   </div>
                   <Select
@@ -382,7 +385,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                   <div className="flex items-center gap-2 mb-2">
                     <label className="text-sm font-medium text-gray-700">Quantidade</label>
                     <Tooltip content="Número de questões a serem geradas (5 a 20). Caso queira mais ou menos questões pode simplemente digitar o valor desejado e gerar as questões normalmente"
-                    position="bottom"/>
+                      position="bottom" />
                   </div>
                   <Select
                     value={quantity}

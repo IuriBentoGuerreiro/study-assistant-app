@@ -13,6 +13,7 @@ import {
   X,
   Brain
 } from "lucide-react";
+import { logout } from "@/src/utils/logout";
 
 type SessionListItem = {
   id: string;
@@ -102,9 +103,10 @@ export default function DashboardView() {
           </nav>
 
           {/* Logout Button */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t"
+          onClick={logout}>
             <button className="flex items-center w-full px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-              <LogOut className="w-5 h-5 mr-3" />
+              <LogOut className="w-5 h-5 mr-3"/>
               <span className="font-medium">Sair</span>
             </button>
           </div>
