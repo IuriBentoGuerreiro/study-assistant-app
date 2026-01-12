@@ -55,8 +55,6 @@ export default function DashboardView() {
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", active: true },
     { icon: MessageSquare, label: "Chat", path: "/chat", active: false },
-    { icon: BookOpen, label: "Sessões", path: "/sessions", active: false },
-    { icon: Settings, label: "Configurações", path: "/settings", active: false },
   ];
 
   return (

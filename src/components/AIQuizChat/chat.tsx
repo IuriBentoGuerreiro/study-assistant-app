@@ -228,8 +228,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: MessageSquare, label: "Chat", path: "/chat", active: true },
-    { icon: BookOpen, label: "Sessões", path: "/sessions" },
-    { icon: Settings, label: "Configurações", path: "/settings" },
   ];
 
   const totalQuestions = currentSession?.questions.length ?? 0;
