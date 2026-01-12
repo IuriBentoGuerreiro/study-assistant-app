@@ -67,7 +67,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     }
   };
 
-  // Atualizar URL quando sessão muda
   const updateURL = (sessionId: string | null) => {
     if (sessionId) {
       router.push(`/chat?session=${sessionId}`, { scroll: false });
@@ -76,7 +75,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     }
   };
 
-  // Carregar sessão da URL ao montar componente
   useEffect(() => {
     const sessionIdFromURL = searchParams.get("session");
     if (sessionIdFromURL) {
@@ -146,7 +144,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       setBanca("");
       setSidebarOpen(false);
 
-      // Recarregar lista de sessões
       await loadSessions();
     } catch (error) {
       console.error("Erro ao gerar questões", error);
