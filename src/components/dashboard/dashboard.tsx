@@ -73,7 +73,7 @@ export default function DashboardView() {
                 <Brain className="text-white" />
               </div>
               <div>
-                <h1 className="font-bold text-gray-800">Quiz AI</h1>
+                <h1 className="font-bold text-gray-800">BrainlyAI</h1>
                 <p className="text-xs text-gray-700">Gerador de questões</p>
               </div>
             </div>

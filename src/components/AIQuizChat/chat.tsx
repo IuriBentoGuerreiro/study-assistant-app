@@ -257,7 +257,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                 <Brain className="text-white" />
               </div>
               <div>
-                <h1 className="font-bold text-gray-800">Quiz AI</h1>
+                <h1 className="font-bold text-gray-800">BrainlyAI</h1>
                 <p className="text-xs text-gray-700">Gerador de questões</p>
               </div>
             </div>
@@ -345,7 +345,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
             <div className="bg-blue-600 p-1.5 rounded-lg">
               <Brain className="text-white w-5 h-5" />
             </div>
-            <h1 className="font-bold text-gray-800">Quiz AI</h1>
+            <h1 className="font-bold text-gray-800">BrainlyAI</h1>
           </div>
         </div>
 
@@ -398,7 +398,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
               {/* TEXTO DE BOAS-VINDAS */}
               <div className="mt-6 sm:mt-10 text-center text-gray-900 px-4">
-                <p className="text-xl sm:text-2xl font-semibold">Bem-vindo ao Quiz AI!</p>
+                <p className="text-xl sm:text-2xl font-semibold">Bem-vindo ao BrainlyAI!</p>
                 <p className="mt-2 text-base sm:text-lg">
                   Digite um tema, escolha a quantidade de questões e a banca para gerar suas questões personalizadas.
                   Você também pode selecionar uma sessão existente na barra lateral para revisar suas questões anteriores.
