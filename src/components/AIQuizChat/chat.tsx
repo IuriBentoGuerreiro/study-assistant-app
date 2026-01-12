@@ -121,13 +121,26 @@ export default function AIQuizChat() {
 
   const loadSessionQuestions = async (sessionId: string) => {
     try {
-      const { data } = await api.get<Question[]>(`/question/${sessionId}`);
+      const { data } = await api.get<any[]>(`/question/${sessionId}`);
+
+      const normalizedQuestions: Question[] = data.map(q => ({
+        id: String(q.id),
+        statement: q.statement,
+        options: q.options,
+        correctAnswerIndex: q.correctAnswerIndex,
+        userAnswerIndex:
+          q.studyAnswer === null || q.studyAnswer === undefined
+            ? undefined
+            : q.studyAnswer,
+      }));
 
       setCurrentSession({
         id: sessionId,
         topic: "",
-        questions: data,
-        completed: data.every(q => q.userAnswerIndex !== undefined),
+        questions: normalizedQuestions,
+        completed: normalizedQuestions.every(
+          q => q.userAnswerIndex !== undefined
+        ),
       });
     } catch (err) {
       console.error("Erro ao carregar questões da sessão", err);
@@ -174,6 +187,19 @@ export default function AIQuizChat() {
     { icon: BookOpen, label: "Sessões", path: "/sessions" },
     { icon: Settings, label: "Configurações", path: "/settings" },
   ];
+
+  const totalQuestions = currentSession?.questions.length ?? 0;
+
+  const answeredQuestions =
+    currentSession?.questions.filter(
+      (q) => q.userAnswerIndex !== undefined
+    ).length ?? 0;
+
+  const correctAnswers =
+    currentSession?.questions.filter(
+      (q) => q.userAnswerIndex === q.correctAnswerIndex
+    ).length ?? 0;
+
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -364,6 +390,26 @@ export default function AIQuizChat() {
           </div>
         )}
 
+        {currentSession && (
+          <div className="max-w-3xl mx-auto mt-8 bg-white border rounded-xl p-5 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              <p>
+                <strong>Respondidas:</strong> {answeredQuestions} / {totalQuestions}
+              </p>
+              <p>
+                <strong>Acertos:</strong> {correctAnswers}
+              </p>
+            </div>
+
+            <div className="text-lg font-semibold text-gray-800">
+              {answeredQuestions === totalQuestions && (
+                <span>
+                  🎯 Resultado: {correctAnswers}/{totalQuestions}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
