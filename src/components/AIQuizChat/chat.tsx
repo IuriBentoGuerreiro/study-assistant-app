@@ -112,6 +112,7 @@ export default function AIQuizChat() {
       setTopic("");
       setQuantity("");
       setBanca("");
+      setSidebarOpen(false);
     } catch (error) {
       console.error("Erro ao gerar questões", error);
     } finally {
@@ -142,6 +143,8 @@ export default function AIQuizChat() {
           q => q.userAnswerIndex !== undefined
         ),
       });
+
+      setSidebarOpen(false);
     } catch (err) {
       console.error("Erro ao carregar questões da sessão", err);
     }
@@ -179,6 +182,7 @@ export default function AIQuizChat() {
   const resetQuiz = () => {
     setCurrentSession(null);
     setTopic("");
+    setSidebarOpen(false);
   };
 
   const menuItems = [
@@ -257,8 +261,8 @@ export default function AIQuizChat() {
                   loadSessionQuestions(s.id);
                 }}
                 className={`w-full text-left text-gray-800 px-4 py-3 rounded-lg 
-      border border-gray-300
-      ${activeSessionId === s.id
+                  border border-gray-300
+                  ${activeSessionId === s.id
                     ? "bg-blue-50 border-blue-100"
                     : "hover:bg-gray-50"
                   }`}
@@ -271,7 +275,6 @@ export default function AIQuizChat() {
                 </p>
               </button>
             ))}
-
           </div>
 
           <div className="p-4 border-t">
@@ -283,133 +286,161 @@ export default function AIQuizChat() {
         </div>
       </div>
 
+      {/* Overlay para fechar sidebar no mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* MAIN */}
-      <div className="flex-1 overflow-y-auto p-6">
-
-        {/* INPUT */}
-        {!currentSession && (
-          <div className="max-w-2xl mx-auto mb-6 flex flex-col gap-6 text-gray-900">
-            {/* Prompt */}
-            <div className="flex gap-3 flex-wrap">
-              <input
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="Digite um tema para gerar questões..."
-                className="border rounded-lg px-4 py-3"
-              />
-              <Select
-                value={quantity}
-                onChange={setQuantity}
-                options={["5", "10", "15", "20"]}
-                placeholder="Quantidade de questões"
-                className="flex-1"
-              />
-              {/* Banca */}
-              <Select
-                value={banca}
-                onChange={setBanca}
-                options={[
-                  "Cespe/CEBRASPE",
-                  "FGV",
-                  "FCC",
-                  "Vunesp",
-                  "IBFC",
-                  "FUNCAB",
-                  "AOCP",
-                  "Quadrix"
-                ]}
-                placeholder="Selecione a banca"
-                className="flex-1"
-              />
-              {/* Botão Gerar */}
-              <button
-                onClick={generateQuestions}
-                disabled={isGenerating}
-                className="bg-blue-600 text-white px-6 rounded-lg"
-              >
-                {isGenerating ? <Loader2 className="animate-spin" /> : "Gerar"}
-              </button>
+      <div className="flex-1 overflow-y-auto">
+        {/* Header Mobile com botão menu */}
+        <div className="lg:hidden sticky top-0 z-30 bg-white border-b px-4 py-3 flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <Menu className="w-6 h-6 text-gray-700" />
+          </button>
+          <div className="flex gap-2 items-center">
+            <div className="bg-blue-600 p-1.5 rounded-lg">
+              <Brain className="text-white w-5 h-5" />
             </div>
-            {/* TEXTO DE BOAS-VINDAS */}
-            <div className="mt-10 text-center text-gray-900">
-              <p className="text-2xl font-semibold">Bem-vindo ao Quiz AI!</p>
-              <p className="mt-2 text-lg">
-                Digite um tema, escolha a quantidade de questões e a banca para gerar suas questões personalizadas.
-                Você também pode selecionar uma sessão existente na barra lateral para revisar suas questões anteriores.
-              </p>
-            </div>
+            <h1 className="font-bold text-gray-800">Quiz AI</h1>
           </div>
-        )}
+        </div>
 
-        {/* QUESTIONS */}
-        {currentSession && (
-          <div className="max-w-3xl mx-auto space-y-6 text-gray-600">
-            {currentSession.questions.map((q, idx) => (
-              <div key={q.id} className="bg-white p-5 rounded-xl border">
-                <h3 className="font-semibold mb-4">
-                  {idx + 1}. {q.statement}
-                </h3>
+        <div className="p-4 sm:p-6">
+          {/* INPUT */}
+          {!currentSession && (
+            <div className="max-w-2xl mx-auto mb-6 flex flex-col gap-4 sm:gap-6 text-gray-900">
+              {/* Prompt */}
+              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                <Select
+                  value={banca}
+                  onChange={setBanca}
+                  options={[
+                    "Cespe/CEBRASPE",
+                    "FGV",
+                    "FCC",
+                    "Vunesp",
+                    "IBFC",
+                    "FUNCAB",
+                    "AOCP",
+                    "Quadrix",
+                  ]}
+                  placeholder="Selecione a banca"
+                  className="w-full sm:flex-2 sm:min-w-60"
+                />
 
-                <div className="space-y-2">
-                  {q.options.map((opt, i) => {
-                    const answered = q.userAnswerIndex !== undefined;
-                    const isCorrect = i === q.correctAnswerIndex;
-                    const isSelected = i === q.userAnswerIndex;
+                <Select
+                  value={quantity}
+                  onChange={setQuantity}
+                  options={["5", "10", "15", "20"]}
+                  placeholder="Quantidade"
+                  className="w-full sm:flex-1 sm:min-w-40"
+                />
 
-                    let style =
-                      "border-gray-300 bg-white hover:bg-gray-50 hover:border-gray-400";
+                <input
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Digite um tema para gerar questões..."
+                  className="border rounded-lg px-4 py-3 w-full sm:flex-2 sm:min-w-70"
+                />
 
-                    if (answered) {
-                      if (isCorrect)
-                        style = "border-green-500 bg-green-50";
-                      else if (isSelected)
-                        style = "border-red-500 bg-red-50";
-                      else
-                        style = "border-gray-200 bg-gray-100";
-                    }
-
-                    return (
-                      <button
-                        key={i}
-                        disabled={answered}
-                        onClick={() => handleAnswer(q.id, i)}
-                        className={`
-                  w-full text-left px-4 py-3 rounded-lg border
-                  transition-all duration-200
-                  ${style}
-                  ${answered ? "cursor-default" : "cursor-pointer"}
-                `}
-                      >
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
+                <button
+                  onClick={generateQuestions}
+                  disabled={isGenerating}
+                  className="bg-blue-600 text-white px-8 py-3 rounded-lg w-full sm:w-auto sm:min-w-36 flex items-center justify-center"
+                >
+                  {isGenerating ? <Loader2 className="animate-spin" /> : "Gerar"}
+                </button>
               </div>
-            ))}
-          </div>
-        )}
 
-        {currentSession && (
-          <div className="max-w-3xl mx-auto mt-8 bg-white border rounded-xl p-5 flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              <p>
-                <strong>Respondidas:</strong> {answeredQuestions} / {totalQuestions}
-              </p>
-              <p>
-                <strong>Acertos:</strong> {correctAnswers}
-              </p>
+              {/* TEXTO DE BOAS-VINDAS */}
+              <div className="mt-6 sm:mt-10 text-center text-gray-900 px-4">
+                <p className="text-xl sm:text-2xl font-semibold">Bem-vindo ao Quiz AI!</p>
+                <p className="mt-2 text-base sm:text-lg">
+                  Digite um tema, escolha a quantidade de questões e a banca para gerar suas questões personalizadas.
+                  Você também pode selecionar uma sessão existente na barra lateral para revisar suas questões anteriores.
+                </p>
+              </div>
             </div>
+          )}
 
-            <div className="text-lg font-semibold text-gray-800">
-              {answeredQuestions === totalQuestions && (
-                <span>
-                  🎯 Resultado: {correctAnswers}/{totalQuestions}
-                </span>
-              )}
+          {/* QUESTIONS */}
+          {currentSession && (
+            <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6 text-gray-600">
+              {currentSession.questions.map((q, idx) => (
+                <div key={q.id} className="bg-white p-4 sm:p-5 rounded-xl border">
+                  <h3 className="font-semibold mb-4 text-sm sm:text-base">
+                    {idx + 1}. {q.statement}
+                  </h3>
+
+                  <div className="space-y-2">
+                    {q.options.map((opt, i) => {
+                      const answered = q.userAnswerIndex !== undefined;
+                      const isCorrect = i === q.correctAnswerIndex;
+                      const isSelected = i === q.userAnswerIndex;
+
+                      let style =
+                        "border-gray-300 bg-white hover:bg-gray-50 hover:border-gray-400";
+
+                      if (answered) {
+                        if (isCorrect)
+                          style = "border-green-500 bg-green-50";
+                        else if (isSelected)
+                          style = "border-red-500 bg-red-50";
+                        else
+                          style = "border-gray-200 bg-gray-100";
+                      }
+
+                      return (
+                        <button
+                          key={i}
+                          disabled={answered}
+                          onClick={() => handleAnswer(q.id, i)}
+                          className={`
+                            w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border
+                            transition-all duration-200 text-sm sm:text-base
+                            ${style}
+                            ${answered ? "cursor-default" : "cursor-pointer"}
+                          `}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+
+          {/* RESULTADO DE QUESTÕES CERTAS AO FINAL DA PÁGINA */}
+          {currentSession && (
+            <div className="max-w-3xl mx-auto mt-6 sm:mt-8 bg-white border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="text-sm text-gray-600">
+                <p>
+                  <strong>Respondidas:</strong> {answeredQuestions} / {totalQuestions}
+                </p>
+                <p>
+                  <strong>Acertos:</strong> {correctAnswers}
+                </p>
+              </div>
+
+              <div className="text-base sm:text-lg font-semibold text-gray-800">
+                {answeredQuestions === totalQuestions && (
+                  <span>
+                    🎯 Resultado: {correctAnswers}/{totalQuestions}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
