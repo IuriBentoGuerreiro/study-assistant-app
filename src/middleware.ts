@@ -20,8 +20,9 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("access_token")?.value;
 
   if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(
+      new URL("/login", request.url)
+    );
   }
 
   return NextResponse.next();
@@ -29,13 +30,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Aplica em todas as rotas exceto:
-     * - api
-     * - _next/static
-     * - _next/image
-     * - favicon
-     */
     "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };

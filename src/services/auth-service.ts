@@ -9,9 +9,11 @@ export type LoginRequest = {
 
 type LoginResponse = {
   accessToken: string;
+  refreshToken: string;
 };
 
-const COOKIE_NAME = "access_token";
+const COOKIE_ACCESS_TOKEN = "access_token";
+const COOKIE_REFRESH_TOKEN = "refresh_token";
 
 export async function login(data: LoginRequest): Promise<void> {
   const { data: response } = await api.post<LoginResponse>(
@@ -21,7 +23,15 @@ export async function login(data: LoginRequest): Promise<void> {
 
   const token = response.accessToken;
 
-  Cookies.set(COOKIE_NAME, token, {
+  Cookies.set(COOKIE_ACCESS_TOKEN, token, {
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  const refreshToken = response.refreshToken;
+
+  Cookies.set(COOKIE_REFRESH_TOKEN, refreshToken, {
     path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
