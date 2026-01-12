@@ -200,7 +200,7 @@ export default function DashboardView() {
                   {sessions.map((session) => (
                     <div
                       key={session.id}
-                      onClick={() => router.push(`/session/${session.id}`)}
+                      onClick={() => router.push(`/chat?session=${session.id}`)}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                     >
                       <div className="flex items-center">

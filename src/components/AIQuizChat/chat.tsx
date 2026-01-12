@@ -13,7 +13,7 @@ import {
   Loader2,
   MessageSquare,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/src/lib/api";
 import Select from "../ui/select";
 
@@ -38,8 +38,13 @@ type Session = {
   completed: boolean;
 };
 
-export default function AIQuizChat() {
+type AIQuizChatProps = {
+  initialSessionId?: string;
+};
+
+export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [topic, setTopic] = useState("");
   const [quantity, setQuantity] = useState<string>("");
@@ -61,6 +66,28 @@ export default function AIQuizChat() {
       console.error("Erro ao carregar sessões", err);
     }
   };
+
+  // Atualizar URL quando sessão muda
+  const updateURL = (sessionId: string | null) => {
+    if (sessionId) {
+      router.push(`/chat?session=${sessionId}`, { scroll: false });
+    } else {
+      router.push("/chat", { scroll: false });
+    }
+  };
+
+  // Carregar sessão da URL ao montar componente
+  useEffect(() => {
+    const sessionIdFromURL = searchParams.get("session");
+    if (sessionIdFromURL) {
+      loadSessionQuestions(sessionIdFromURL);
+      setActiveSessionId(sessionIdFromURL);
+    } else if (initialSessionId) {
+      loadSessionQuestions(initialSessionId);
+      setActiveSessionId(initialSessionId);
+      updateURL(initialSessionId);
+    }
+  }, [initialSessionId]);
 
   useEffect(() => {
     loadSessions();
@@ -102,17 +129,25 @@ export default function AIQuizChat() {
         correctAnswerIndex: q.correctAnswerIndex,
       }));
 
+      const newSessionId = response.data.id;
+
       setCurrentSession({
-        id: crypto.randomUUID(),
+        id: newSessionId,
         topic,
         questions,
         completed: false,
       });
 
+      setActiveSessionId(newSessionId);
+      updateURL(newSessionId);
+
       setTopic("");
       setQuantity("");
       setBanca("");
       setSidebarOpen(false);
+
+      // Recarregar lista de sessões
+      await loadSessions();
     } catch (error) {
       console.error("Erro ao gerar questões", error);
     } finally {
@@ -181,8 +216,16 @@ export default function AIQuizChat() {
 
   const resetQuiz = () => {
     setCurrentSession(null);
+    setActiveSessionId(null);
     setTopic("");
+    updateURL(null);
     setSidebarOpen(false);
+  };
+
+  const handleSessionSelect = (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    loadSessionQuestions(sessionId);
+    updateURL(sessionId);
   };
 
   const menuItems = [
@@ -204,13 +247,13 @@ export default function AIQuizChat() {
       (q) => q.userAnswerIndex === q.correctAnswerIndex
     ).length ?? 0;
 
-
   return (
     <div className="flex h-screen bg-gray-50">
       {/* SIDEBAR */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         <div className="flex flex-col h-full">
           <div className="p-6 border-b flex justify-between items-center">
@@ -233,10 +276,11 @@ export default function AIQuizChat() {
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${item.active
-                  ? "bg-blue-50 text-blue-600"
-                  : "hover:bg-gray-100 text-gray-600"
-                  }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
+                  item.active
+                    ? "bg-blue-50 text-blue-600"
+                    : "hover:bg-gray-100 text-gray-600"
+                }`}
               >
                 <item.icon className="w-5 h-5" />
                 {item.label}
@@ -256,15 +300,13 @@ export default function AIQuizChat() {
             {sessions.map((s) => (
               <button
                 key={s.id}
-                onClick={() => {
-                  setActiveSessionId(s.id);
-                  loadSessionQuestions(s.id);
-                }}
+                onClick={() => handleSessionSelect(s.id)}
                 className={`w-full text-left text-gray-800 px-4 py-3 rounded-lg 
                   border border-gray-300
-                  ${activeSessionId === s.id
-                    ? "bg-blue-50 border-blue-100"
-                    : "hover:bg-gray-50"
+                  ${
+                    activeSessionId === s.id
+                      ? "bg-blue-50 border-blue-100"
+                      : "hover:bg-gray-50"
                   }`}
               >
                 <p className="font-medium truncate">
