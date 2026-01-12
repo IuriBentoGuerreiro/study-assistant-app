@@ -357,7 +357,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                   <div className="flex items-center gap-2 mb-2">
                     <label className="text-sm font-medium text-gray-700">Banca</label>
                     <Tooltip content="Selecione a instituição organizadora do concurso. Caso não tenha a banca desejada pode digitar o nome dela e gere as questões normalmente"
-                    position="right" 
+                    position="bottom" 
                     />
                   </div>
                   <Select

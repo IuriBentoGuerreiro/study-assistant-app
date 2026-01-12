@@ -46,7 +46,8 @@ export default function Tooltip({
         <div
           className={`
             absolute z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg
-            shadow-lg whitespace-nowrap pointer-events-none
+            shadow-lg pointer-events-none
+            max-w-50 sm:max-w-none sm:whitespace-nowrap
             ${positionClasses[position]}
           `}
         >
