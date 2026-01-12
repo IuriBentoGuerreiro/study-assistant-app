@@ -32,7 +32,7 @@ export default function LoginForm() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4 shadow-lg">
             <Brain className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">StudyApp</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">BrainlyAI</h1>
           <p className="text-gray-600">Entre para continuar seus estudos</p>
         </div>
 

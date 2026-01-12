@@ -16,6 +16,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/src/lib/api";
 import Select from "../ui/select";
+import Tooltip from "../ui/tooltip";
 
 type SessionListItem = {
   id: string;
@@ -246,9 +247,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     <div className="flex h-screen bg-gray-50">
       {/* SIDEBAR */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex flex-col h-full">
           <div className="p-6 border-b flex justify-between items-center">
@@ -271,11 +271,10 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
-                  item.active
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${item.active
                     ? "bg-blue-50 text-blue-600"
                     : "hover:bg-gray-100 text-gray-600"
-                }`}
+                  }`}
               >
                 <item.icon className="w-5 h-5" />
                 {item.label}
@@ -298,10 +297,9 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                 onClick={() => handleSessionSelect(s.id)}
                 className={`w-full text-left text-gray-800 px-4 py-3 rounded-lg 
                   border border-gray-300
-                  ${
-                    activeSessionId === s.id
-                      ? "bg-blue-50 border-blue-100"
-                      : "hover:bg-gray-50"
+                  ${activeSessionId === s.id
+                    ? "bg-blue-50 border-blue-100"
+                    : "hover:bg-gray-50"
                   }`}
               >
                 <p className="font-medium truncate">
@@ -355,47 +353,70 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
             <div className="max-w-2xl mx-auto mb-6 flex flex-col gap-4 sm:gap-6 text-gray-900">
               {/* Prompt */}
               <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-                <Select
-                  value={banca}
-                  onChange={setBanca}
-                  options={[
-                    "Cespe/CEBRASPE",
-                    "FGV",
-                    "FCC",
-                    "Vunesp",
-                    "IBFC",
-                    "FUNCAB",
-                    "AOCP",
-                    "Quadrix",
-                  ]}
-                  placeholder="Selecione a banca"
-                  className="w-full sm:flex-2 sm:min-w-60"
-                />
+                <div className="w-full sm:flex-2 sm:min-w-60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Banca</label>
+                    <Tooltip content="Selecione a instituição organizadora do concurso. Caso não tenha a banca desejada pode digitar o nome dela e gere as questões normalmente"
+                    position="right" 
+                    />
+                  </div>
+                  <Select
+                    value={banca}
+                    onChange={setBanca}
+                    options={[
+                      "Cespe/CEBRASPE",
+                      "FGV",
+                      "FCC",
+                      "Vunesp",
+                      "IBFC",
+                      "FUNCAB",
+                      "AOCP",
+                      "Quadrix",
+                    ]}
+                    placeholder="Selecione a banca"
+                    className="w-full"
+                  />
+                </div>
 
-                <Select
-                  value={quantity}
-                  onChange={setQuantity}
-                  options={["5", "10", "15", "20"]}
-                  placeholder="Quantidade"
-                  className="w-full sm:flex-1 sm:min-w-40"
-                />
+                <div className="w-full sm:flex-1 sm:min-w-40">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Quantidade</label>
+                    <Tooltip content="Número de questões a serem geradas (5 a 20). Caso queira mais ou menos questões pode simplemente digitar o valor desejado e gerar as questões normalmente"
+                    position="bottom"/>
+                  </div>
+                  <Select
+                    value={quantity}
+                    onChange={setQuantity}
+                    options={["5", "10", "15", "20"]}
+                    placeholder="Quantidade"
+                    className="w-full"
+                  />
+                </div>
 
-                <input
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="Digite um tema para gerar questões..."
-                  className="border rounded-lg px-4 py-3 w-full sm:flex-2 sm:min-w-70"
-                />
+                <div className="w-full sm:flex-2 sm:min-w-70">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Tema</label>
+                    <Tooltip
+                      content="Digite o assunto sobre o qual deseja gerar questões (ex: Direito Constitucional), você também pode copiar o conteudo de um PDF e colar aqui!"
+                      position="bottom"
+                    />
+                  </div>
+                  <input
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="Digite um tema para gerar questões..."
+                    className="border rounded-lg px-4 py-3 w-full"
+                  />
+                </div>
 
                 <button
                   onClick={generateQuestions}
                   disabled={isGenerating}
-                  className="bg-blue-600 text-white px-8 py-3 rounded-lg w-full sm:w-auto sm:min-w-36 flex items-center justify-center"
+                  className="bg-blue-600 text-white px-8 py-3 rounded-lg w-full sm:w-auto sm:min-w-36 flex items-center justify-center mt-auto"
                 >
                   {isGenerating ? <Loader2 className="animate-spin" /> : "Gerar"}
                 </button>
               </div>
-
               {/* TEXTO DE BOAS-VINDAS */}
               <div className="mt-6 sm:mt-10 text-center text-gray-900 px-4">
                 <p className="text-xl sm:text-2xl font-semibold">Bem-vindo ao BrainlyAI!</p>
