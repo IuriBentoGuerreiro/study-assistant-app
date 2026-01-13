@@ -7,8 +7,6 @@ import {
   Menu,
   X,
   LayoutDashboard,
-  BookOpen,
-  Settings,
   LogOut,
   Loader2,
   MessageSquare,
@@ -59,6 +57,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const loadSessions = async () => {
     try {
       const userId = Number(sessionStorage.getItem("userId"));
@@ -96,7 +96,14 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const generateQuestions = async () => {
     if (!topic.trim()) return;
 
+    if (Number(quantity) > 50) {
+      setErrorMessage("O limite máximo de questões é 50");
+      return;
+    }
+
+    setErrorMessage(null);
     setIsGenerating(true);
+
     const userId = Number(sessionStorage.getItem("userId"));
 
     try {
@@ -111,6 +118,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       if (quantity && quantity.trim()) {
         params.append("quantidade", quantity);
       }
+
+
 
       const response = await api.post(
         `/session/generateIa?${params.toString()}`,
@@ -147,11 +156,22 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       setSidebarOpen(false);
 
       await loadSessions();
-    } catch (error) {
-      console.error("Erro ao gerar questões", error);
+    } catch (error: any) {
+      const status = error.response?.status;
+      const message =
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Erro inesperado ao gerar questões";
+
+      if (status === 400) {
+        setErrorMessage(message);
+      } else {
+        setErrorMessage("Erro inesperado. Tente novamente.");
+      }
     } finally {
       setIsGenerating(false);
     }
+
   };
 
   const loadSessionQuestions = async (sessionId: string) => {
@@ -315,9 +335,9 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
           {/* Logout Button */}
           <div className="p-4 border-t"
-          onClick={logout}>
+            onClick={logout}>
             <button className="flex items-center w-full px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-              <LogOut className="w-5 h-5 mr-3"/>
+              <LogOut className="w-5 h-5 mr-3" />
               <span className="font-medium">Sair</span>
             </button>
           </div>
@@ -384,13 +404,13 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                 <div className="w-full sm:flex-1 sm:min-w-40">
                   <div className="flex items-center gap-2 mb-2">
                     <label className="text-sm font-medium text-gray-700">Quantidade</label>
-                    <Tooltip content="Número de questões a serem geradas (5 a 20). Caso queira mais ou menos questões pode simplemente digitar o valor desejado e gerar as questões normalmente"
+                    <Tooltip content="Número de questões a serem geradas (1 a 50)."
                       position="bottom" />
                   </div>
                   <Select
                     value={quantity}
                     onChange={setQuantity}
-                    options={["5", "10", "15", "20"]}
+                    options={["5", "10", "15", "20", "25", "30", "35", "40", "45", "50"]}
                     placeholder="Quantidade"
                     className="w-full"
                   />
@@ -411,6 +431,14 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                     className="border rounded-lg px-4 py-3 w-full"
                   />
                 </div>
+
+                {errorMessage && (
+                  <div className="w-full">
+                    <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      {errorMessage}
+                    </div>
+                  </div>
+                )}
 
                 <button
                   onClick={generateQuestions}
