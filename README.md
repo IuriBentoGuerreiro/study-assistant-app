@@ -72,7 +72,7 @@ Mostra informações como:
 
 - Acessa o chat e cria uma sova sessão
 
-- Manda as informações de banca quantidade e o prompt
+- Manda as informações de banca, quantidade e o prompt
 
 - A IA extrai e analisa o conteúdo
 
