@@ -10,6 +10,7 @@ import {
   LogOut,
   Loader2,
   MessageSquare,
+  FileText,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/src/lib/api";
@@ -250,6 +251,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: MessageSquare, label: "Chat", path: "/chat", active: true },
+    { icon: FileText, label: "Resumos", path: "/resume" },
+
   ];
 
   const totalQuestions = currentSession?.questions.length ?? 0;

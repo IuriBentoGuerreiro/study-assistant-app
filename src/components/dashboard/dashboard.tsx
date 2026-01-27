@@ -3,15 +3,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/src/lib/api";
 import { DashboardDTO } from "@/src/types/DashboardDTO";
-import { 
-  LayoutDashboard, 
-  MessageSquare, 
-  BookOpen, 
-  Settings, 
+import {
+  LayoutDashboard,
+  MessageSquare,
+  BookOpen,
+  Settings,
   LogOut,
   Menu,
   X,
-  Brain
+  Brain,
+  FileText
 } from "lucide-react";
 import { logout } from "@/src/utils/logout";
 
@@ -55,20 +56,21 @@ export default function DashboardView() {
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", active: true },
-    { icon: MessageSquare, label: "Chat", path: "/chat", active: false },
+    { icon: MessageSquare, label: "Chat", path: "/chat" },
+    { icon: FileText, label: "Resumos", path: "/resume" },
+
   ];
 
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo/Header */}
-                    <div className="p-6 border-b flex justify-between items-center">
+          <div className="p-6 border-b flex justify-between items-center">
             <div className="flex gap-3 items-center">
               <div className="bg-blue-600 p-2 rounded-lg">
                 <Brain className="text-white" />
@@ -90,11 +92,10 @@ export default function DashboardView() {
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
-                className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${
-                  item.active
+                className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${item.active
                     ? "bg-blue-50 text-blue-600"
                     : "text-gray-600 hover:bg-gray-100"
-                }`}
+                  }`}
               >
                 <item.icon className="w-5 h-5 mr-3" />
                 <span className="font-medium">{item.label}</span>
@@ -104,9 +105,9 @@ export default function DashboardView() {
 
           {/* Logout Button */}
           <div className="p-4 border-t"
-          onClick={logout}>
+            onClick={logout}>
             <button className="flex items-center w-full px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-              <LogOut className="w-5 h-5 mr-3"/>
+              <LogOut className="w-5 h-5 mr-3" />
               <span className="font-medium">Sair</span>
             </button>
           </div>
@@ -135,7 +136,7 @@ export default function DashboardView() {
               </button>
               <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
             </div>
-            
+
             <button
               onClick={handleClickChat}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
