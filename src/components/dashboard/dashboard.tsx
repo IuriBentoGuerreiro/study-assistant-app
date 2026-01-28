@@ -93,8 +93,8 @@ export default function DashboardView() {
                 key={item.path}
                 onClick={() => router.push(item.path)}
                 className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${item.active
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-gray-600 hover:bg-gray-100"
                   }`}
               >
                 <item.icon className="w-5 h-5 mr-3" />

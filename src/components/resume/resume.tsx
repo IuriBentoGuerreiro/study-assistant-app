@@ -48,8 +48,6 @@ export default function AIResumeChat() {
         loadResumes();
     }, []);
 
-
-
     const generateResume = async () => {
         if (!prompt.trim()) return;
 
@@ -228,47 +226,67 @@ export default function AIResumeChat() {
                 <div className="p-4 sm:p-6">
                     <div className="max-w-6xl mx-auto space-y-6 text-gray-900">
                         {/* INPUT */}
-                        <div className="flex flex-col gap-4">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <label className="text-sm font-medium text-gray-700">
-                                        Prompt do resumo
-                                    </label>
-                                    <Tooltip
-                                        content="Descreva o tema desejado para gerar um resumo. Você pode colar o conteudo de um PDF aqui!."
-                                        position="bottom"
+                        {/* INPUT */}
+                        {!resume && (
+                            <div className="flex flex-col gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <label className="text-sm font-medium text-gray-700">
+                                            Prompt do resumo
+                                        </label>
+                                        <Tooltip
+                                            content="Descreva o tema desejado para gerar um resumo. Você pode colar o conteudo de um PDF aqui!."
+                                            position="bottom"
+                                        />
+                                    </div>
+
+                                    <textarea
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                        rows={6}
+                                        placeholder="Ex: Princípios fundamentais da Constituição Federal de 1988..."
+                                        className="border rounded-lg px-4 py-3 w-full resize-none"
                                     />
                                 </div>
 
-                                <textarea
-                                    value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                    rows={6}
-                                    placeholder="Ex: Princípios fundamentais da Constituição Federal de 1988, fundamentos da República..."
-                                    className="border rounded-lg px-4 py-3 w-full resize-none"
-                                />
-                            </div>
-
-                            {errorMessage && (
-                                <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm">
-                                    {errorMessage}
-                                </div>
-                            )}
-
-                            <button
-                                onClick={generateResume}
-                                disabled={isGenerating}
-                                className="bg-blue-600 text-white px-8 py-3 rounded-lg flex items-center justify-center"
-                            >
-                                {isGenerating ? (
-                                    <Loader2 className="animate-spin" />
-                                ) : (
-                                    "Gerar resumo"
+                                {errorMessage && (
+                                    <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm">
+                                        {errorMessage}
+                                    </div>
                                 )}
-                            </button>
-                        </div>
+
+                                <button
+                                    onClick={generateResume}
+                                    disabled={isGenerating}
+                                    className="bg-blue-600 text-white px-8 py-3 rounded-lg flex items-center justify-center"
+                                >
+                                    {isGenerating ? (
+                                        <Loader2 className="animate-spin" />
+                                    ) : (
+                                        "Gerar resumo"
+                                    )}
+                                </button>
+                            </div>
+                        )}
 
                         {/* RESULTADO */}
+                        {resume && (
+                            <div className="mb-4 flex justify-between items-center">
+                                <h2 className="text-lg font-semibold text-gray-800">
+                                    Resumo gerado:
+                                </h2>
+                                <button
+                                    onClick={() => {
+                                        setResume(null);
+                                        setActiveResumeId(null);
+                                    }} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                >
+                                    <FileText className="w-5 h-5 mr-2" />
+                                    Novo Resumo
+                                </button>
+                            </div>
+                        )}
+
                         {resume && (
                             <ReactMarkdown
                                 rehypePlugins={[rehypeRaw, rehypeSanitize]}
