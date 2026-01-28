@@ -17,6 +17,8 @@ import { api } from "@/src/lib/api";
 import Tooltip from "../ui/tooltip";
 import { logout } from "@/src/utils/logout";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 
 type ResumeListItem = {
     id: string;
@@ -268,42 +270,40 @@ export default function AIResumeChat() {
 
                         {/* RESULTADO */}
                         {resume && (
-                            <div className="bg-white border rounded-xl p-6 shadow-sm">
-                                <h2 className="font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                                    <FileText className="w-5 h-5 text-blue-600" />
-                                    Resumo gerado
-                                </h2>
-
-                                <ReactMarkdown
-                                    components={{
-                                        h1: ({ node, ...props }) => (
-                                            <h1 className="text-2xl font-bold text-blue-600 mt-6 mb-3" {...props} />
-                                        ),
-                                        h2: ({ node, ...props }) => (
-                                            <h2 className="text-xl font-semibold text-blue-600 mt-5 mb-2" {...props} />
-                                        ),
-                                        h3: ({ node, ...props }) => (
-                                            <h3 className="text-lg font-semibold text-blue-500 mt-4 mb-2" {...props} />
-                                        ),
-                                        p: ({ node, ...props }) => (
-                                            <p className="text-gray-700 leading-relaxed mb-3" {...props} />
-                                        ),
-                                        ul: ({ node, ...props }) => (
-                                            <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />
-                                        ),
-                                        li: ({ node, ...props }) => (
-                                            <li className="text-gray-700" {...props} />
-                                        ),
-                                        hr: () => <hr className="my-6 border-t border-gray-200" />,
-                                        strong: ({ node, ...props }) => (
-                                            <strong className="text-gray-900 font-semibold" {...props} />
-                                        ),
-                                    }}
-                                >
-                                    {resume.text}
-                                </ReactMarkdown>
-                            </div>
+                            <ReactMarkdown
+                                rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                                components={{
+                                    h1: ({ node, ...props }) => (
+                                        <h1 className="text-2xl font-bold text-blue-600 mt-6 mb-3" {...props} />
+                                    ),
+                                    h2: ({ node, ...props }) => (
+                                        <h2 className="text-xl font-semibold text-blue-600 mt-5 mb-2" {...props} />
+                                    ),
+                                    h3: ({ node, ...props }) => (
+                                        <h3 className="text-lg font-semibold text-blue-500 mt-4 mb-2" {...props} />
+                                    ),
+                                    p: ({ node, ...props }) => (
+                                        <p className="text-gray-700 leading-relaxed mb-3" {...props} />
+                                    ),
+                                    ul: ({ node, ...props }) => (
+                                        <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />
+                                    ),
+                                    li: ({ node, ...props }) => (
+                                        <li className="text-gray-700" {...props} />
+                                    ),
+                                    strong: ({ node, ...props }) => (
+                                        <strong className="text-gray-900 font-semibold" {...props} />
+                                    ),
+                                    mark: ({ node, ...props }) => (
+                                        <mark className="bg-yellow-200 text-gray-900 px-1 rounded font-medium" {...props} />
+                                    ),
+                                }}
+                            >
+                                {resume.text}
+                            </ReactMarkdown>
                         )}
+
+
                     </div>
                 </div>
             </div>
