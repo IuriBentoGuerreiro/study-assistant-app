@@ -69,9 +69,8 @@ export default function AboutPage() {
     <div className="flex h-screen bg-gray-50">
       {/* SIDEBAR */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex flex-col h-full">
           <div className="p-6 border-b flex justify-between items-center">
@@ -94,11 +93,10 @@ export default function AboutPage() {
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
-                  item.active
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${item.active
                     ? "bg-blue-50 text-blue-600"
                     : "hover:bg-gray-100 text-gray-600"
-                }`}
+                  }`}
               >
                 <item.icon className="w-5 h-5" />
                 {item.label}
@@ -288,7 +286,8 @@ export default function AboutPage() {
             </div>
 
             {/* Call to Action */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 sm:p-8 text-center text-white">
+            <div className="bg-linear-to-r
+ from-blue-600 to-blue-700 rounded-xl p-6 sm:p-8 text-center text-white">
               <h2 className="text-2xl font-bold mb-3">
                 Pronto para otimizar seus estudos?
               </h2>
