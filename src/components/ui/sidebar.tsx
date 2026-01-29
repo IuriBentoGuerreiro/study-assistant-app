@@ -51,15 +51,15 @@ export default function Sidebar({
     <>
       {/* SIDEBAR */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex flex-col h-full">
+
           {/* Header */}
-          <div className="p-6 border-b flex justify-between items-center">
+          <div className="h-16 px-4 border-b flex justify-between items-center">
             <div className="flex gap-3 items-center">
-              <div className="bg-blue-600 p-2 rounded-lg">
+              <div className="bg-blue-600 p-2 rounded-md">
                 <Brain className="text-white" />
               </div>
               <div>
@@ -78,11 +78,10 @@ export default function Sidebar({
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
-                  item.active
-                    ? "bg-blue-50 text-blue-600"
-                    : "hover:bg-gray-100 text-gray-600"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${item.active
+                  ? "bg-blue-50 text-blue-600"
+                  : "hover:bg-gray-100 text-gray-600"
+                  }`}
               >
                 <item.icon className="w-5 h-5" />
                 {item.label}
@@ -107,11 +106,10 @@ export default function Sidebar({
                 <button
                   key={item.id}
                   onClick={() => onItemSelect && onItemSelect(item.id)}
-                  className={`w-full text-left px-4 py-3 rounded-lg border border-gray-300 ${
-                    activeItemId === item.id
-                      ? "bg-blue-50 border-blue-100"
-                      : "hover:bg-gray-50"
-                  }`}
+                  className={`w-full text-left px-4 py-3 rounded-lg border border-gray-300 ${activeItemId === item.id
+                    ? "bg-blue-50 border-blue-100"
+                    : "hover:bg-gray-50"
+                    }`}
                 >
                   <p className="font-medium truncate text-gray-800">
                     {item.title || item.sessionName || "Sem título"}
@@ -139,10 +137,16 @@ export default function Sidebar({
       {/* Overlay mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="
+      fixed inset-0 z-40
+      bg-black/30     /* mobile */
+      lg:bg-black/50  /* desktop */
+      lg:hidden
+    "
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
     </>
   );
 }

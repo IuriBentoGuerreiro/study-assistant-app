@@ -18,6 +18,7 @@ import { api } from "@/src/lib/api";
 import Select from "../ui/select";
 import Tooltip from "../ui/tooltip";
 import Sidebar from "../ui/sidebar";
+import Header from "../ui/header";
 
 type SessionListItem = {
   id: string;
@@ -287,6 +288,11 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
       {/* MAIN */}
       <div className="flex-1 overflow-y-auto">
+        {/* HEADER */}
+                <Header
+                  onMenuClick={() => setSidebarOpen(true)}
+                  title="Dashboard"
+                />
         <div className="p-4 sm:p-6">
 
           {/* INPUT */}
