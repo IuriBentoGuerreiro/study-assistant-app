@@ -74,13 +74,23 @@ export default function LoginForm() {
                   className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
                   placeholder="••••••••"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       handleSubmit(e);
                     }
                   }}
                 />
               </div>
             </div>
+
+            <div className="text-right">
+              <a
+                href="/forgot-password"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Esqueci minha senha
+              </a>
+            </div>
+
 
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
