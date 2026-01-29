@@ -94,7 +94,10 @@ export default function ResetPasswordForm() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full pl-10 pr-12 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full pl-10 pr-12 py-3 rounded-lg border border-gray-300
+           text-gray-800 placeholder-gray-400
+           focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+           focus:outline-none transition"
                   />
                   <button
                     type="button"
@@ -118,7 +121,10 @@ export default function ResetPasswordForm() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="w-full pl-10 pr-12 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full pl-10 pr-12 py-3 rounded-lg border border-gray-300
+           text-gray-800 placeholder-gray-400
+           focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+           focus:outline-none transition"
                   />
                   <button
                     type="button"

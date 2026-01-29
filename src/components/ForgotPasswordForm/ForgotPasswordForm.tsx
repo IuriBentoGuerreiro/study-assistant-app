@@ -71,7 +71,9 @@ export default function ForgotPasswordForm() {
                     onChange={(e) => setUsername(e.target.value)}
                     required
                     placeholder="seu@email.com"
-                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 
+             text-gray-800 placeholder-gray-400
+             focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
                   />
                 </div>
               </div>
