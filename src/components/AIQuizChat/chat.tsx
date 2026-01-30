@@ -291,7 +291,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
         {/* HEADER */}
                 <Header
                   onMenuClick={() => setSidebarOpen(true)}
-                  title="Dashboard"
+                  title="Gerar Questões"
                 />
         <div className="p-4 sm:p-6">
 
@@ -313,6 +313,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                     onChange={setBanca}
                     options={[
                       "Cespe/CEBRASPE",
+                      "Consulpam",
                       "FGV",
                       "FCC",
                       "Vunesp",

@@ -82,7 +82,7 @@ export default function AboutPage() {
         {/* HEADER */}
         <Header
           onMenuClick={() => setSidebarOpen(true)}
-          title="Dashboard"
+          title="Sobre o BrainlyAi"
         />
 
         {/* CONTENT */}
