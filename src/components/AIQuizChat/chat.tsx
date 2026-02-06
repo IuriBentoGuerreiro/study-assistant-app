@@ -20,6 +20,30 @@ import Select from "../ui/select";
 import Tooltip from "../ui/tooltip";
 import Sidebar from "../ui/sidebar";
 import Header from "../ui/header";
+import { ibgeApi } from "@/src/lib/ibgeApi";
+
+type ApiQuestionOption = {
+  id: number;
+  options: string;
+};
+
+type ApiQuestion = {
+  id: number;
+  statement: string;
+  type: keyof typeof QuestionType;
+  correctAnswerIndex: number;
+  studyAnswer?: number | null;
+  options: ApiQuestionOption[];
+};
+
+type QuestionDTO = {
+  id: string;
+  type: keyof typeof QuestionType;
+  statement: string;
+  correctAnswerIndex: number;
+  studyAnswer?: number | null;
+  options?: string[];
+};
 
 type SessionListItem = {
   id: string;
@@ -44,7 +68,16 @@ type Session = {
   completed: boolean;
 };
 
-type QuestionType = "MULTIPLE_CHOICE" | "TRUE_FALSE";
+type StudySessionResponse = {
+  id: string;
+  sessionName: string;
+  questions: QuestionDTO[];
+};
+
+export enum QuestionType {
+  MULTIPLE_CHOICE = "MULTIPLE_CHOICE",
+  TRUE_FALSE = "TRUE_FALSE",
+}
 
 type AIQuizChatProps = {
   initialSessionId?: string;
@@ -57,6 +90,16 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const [topic, setTopic] = useState("");
   const [quantity, setQuantity] = useState<string>("");
   const [banca, setBanca] = useState<string>("");
+
+  const [cargo, setCargo] = useState<string>("")
+  const [orgao, setOrgao] = useState<string>("")
+  const [nivel, setNivel] = useState<string>("")
+
+  const [cidade, setCidade] = useState<string>("")
+  const [estado, setEstado] = useState<string>("")
+
+  const [estados, setEstados] = useState<string[]>([]);
+  const [cidades, setCidades] = useState<string[]>([]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
@@ -111,6 +154,21 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     loadSessions();
   }, []);
 
+  useEffect(() => {
+    carregarEstados().then(setEstados);
+  }, []);
+
+
+  useEffect(() => {
+    if (!estado) {
+      setCidades([]);
+      setCidade("");
+      return;
+    }
+
+    carregarCidades(estado).then(setCidades);
+  }, [estado]);
+
   const generateQuestions = async () => {
     if (!topic.trim()) return;
 
@@ -125,38 +183,42 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     const userId = Number(sessionStorage.getItem("userId"));
 
     try {
-      const params = new URLSearchParams({
-        userId: userId.toString(),
-      });
-
-      if (questionType && questionType.trim()) {
-        params.append("type", questionType);
-      }
-
-      if (banca && banca.trim()) {
-        params.append("banca", banca);
-      }
-
-      if (quantity && quantity.trim()) {
-        params.append("quantidade", quantity);
-      }
+      const payload = {
+        prompt: topic,
+        banca: banca || undefined,
+        quantidade: Number(quantity), // ✅ SEM null
+        type: questionType,
+        orgao: orgao || undefined,
+        cargo: cargo || undefined,
+        cidade: cidade || undefined,
+        estado: estado || undefined,
+        nivel: nivel || undefined,
+      };
 
       const response = await api.post(
-        `/session/generateIa?${params.toString()}`,
-        topic,
+        `/session/generateIa`,
+        payload,
         {
+          params: {
+            userId,
+          },
           headers: {
-            "Content-Type": "text/plain"
-          }
+            "Content-Type": "application/json",
+          },
         }
       );
 
-      const questions: Question[] = response.data.questions.map((q: any) => ({
+
+      const questions: Question[] = response.data.questions.map((q: QuestionDTO) => ({
         id: q.id,
-        type: questionType,
+        type: QuestionType[q.type],
         statement: q.statement,
-        options: q.options,
+        options: q.options ?? [],
         correctAnswerIndex: q.correctAnswerIndex,
+        userAnswerIndex:
+          q.studyAnswer === null || q.studyAnswer === undefined
+            ? undefined
+            : q.studyAnswer,
       }));
 
       const newSessionId = response.data.id;
@@ -194,15 +256,34 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     }
   };
 
+  async function carregarEstados() {
+    const { data } = await ibgeApi.get("/estados", {
+      params: { orderBy: "nome" },
+    });
+
+    return data.map((estado: any) => estado.sigla);
+  }
+
+  async function carregarCidades(uf: string) {
+    const { data } = await ibgeApi.get(
+      `/estados/${uf}/municipios`,
+      { params: { orderBy: "nome" } }
+    );
+
+    return data.map((cidade: any) => cidade.nome);
+  }
+
   const loadSessionQuestions = async (sessionId: string) => {
     try {
-      const { data } = await api.get<any[]>(`/question/${sessionId}`);
+      const { data } = await api.get<ApiQuestion[]>(
+        `/question/${sessionId}`
+      );
 
       const normalizedQuestions: Question[] = data.map(q => ({
         id: String(q.id),
-        type: q.type,
+        type: QuestionType[q.type],
         statement: q.statement,
-        options: q.options,
+        options: q.options?.map(opt => opt.options) ?? [],
         correctAnswerIndex: q.correctAnswerIndex,
         userAnswerIndex:
           q.studyAnswer === null || q.studyAnswer === undefined
@@ -212,7 +293,9 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
       setCurrentSession({
         id: sessionId,
-        topic: "",
+        topic:
+          sessions.find(s => s.id === sessionId)?.sessionName ??
+          "Sessão",
         questions: normalizedQuestions,
         completed: normalizedQuestions.every(
           q => q.userAnswerIndex !== undefined
@@ -246,7 +329,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
         (q) => q.userAnswerIndex !== undefined
       );
 
-      // Mostra o modal quando todas as questões são respondidas
       if (completed && !prev.completed) {
         setTimeout(() => setShowResultsModal(true), 500);
       }
@@ -394,6 +476,175 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                     placeholder="Quantidade"
                     className="w-full"
                     allowCustomValue
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Orgão (opcional)</label>
+                    <Tooltip content="Selecione a instituição organizadora do concurso. Caso não tenha a banca desejada pode digitar o nome dela e gere as questões normalmente"
+                      position="bottom"
+                    />
+                  </div>
+                  <Select
+                    value={orgao}
+                    onChange={setOrgao}
+                    options={[
+                      "INSS",
+                      "Receita Federal do Brasil (RFB)",
+                      "Polícia Federal (PF)",
+                      "Polícia Rodoviária Federal (PRF)",
+                      "Agência Brasileira de Inteligência (ABIN)",
+                      "Banco Central do Brasil (BACEN)",
+                      "Controladoria-Geral da União (CGU)",
+                      "Tribunal de Contas da União (TCU)",
+                      "Supremo Tribunal Federal (STF)",
+                      "Superior Tribunal de Justiça (STJ)",
+                      "Tribunal Superior Eleitoral (TSE)",
+                      "Tribunal Superior do Trabalho (TST)",
+                      "Conselho Nacional de Justiça (CNJ)",
+                      "Ministério Público da União (MPU)",
+                      "Defensoria Pública da União (DPU)",
+                      "Advocacia-Geral da União (AGU)",
+                      "Ministério da Fazenda",
+                      "Ministério da Justiça e Segurança Pública",
+                      "Instituto Brasileiro de Geografia e Estatística (IBGE)",
+                      "Agência Nacional de Vigilância Sanitária (ANVISA)",
+                      "Agência Nacional de Telecomunicações (ANATEL)",
+                      "Agência Nacional de Energia Elétrica (ANEEL)",
+                      "Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)",
+                      "Caixa Econômica Federal (CEF)",
+                      "Banco do Brasil (BB)",
+                      "Correios",
+                      "Universidades Federais",
+                      "Institutos Federais (IFs)"
+                    ]}
+                    placeholder="Selecione a banca"
+                    className="w-full"
+                    allowCustomValue
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Cargo (opcional)</label>
+                    <Tooltip content="Selecione o formato das questões que deseja gerar."
+                      position="bottom" />
+                  </div>
+                  <Select
+                    value={cargo}
+                    onChange={setCargo}
+                    options={[
+                      "Analista Administrativo",
+                      "Técnico Administrativo",
+                      "Assistente Administrativo",
+                      "Agente Administrativo",
+                      "Auxiliar Administrativo",
+
+                      "Analista do Seguro Social",
+                      "Técnico do Seguro Social",
+
+                      "Auditor-Fiscal",
+                      "Analista Tributário",
+
+                      "Analista Judiciário",
+                      "Técnico Judiciário",
+                      "Oficial de Justiça Avaliador Federal",
+
+                      "Analista Ministerial",
+                      "Técnico Ministerial",
+
+                      "Analista de Controle Externo",
+                      "Técnico de Controle Externo",
+
+                      "Analista de Planejamento e Orçamento",
+                      "Especialista em Políticas Públicas e Gestão Governamental (EPPGG)",
+
+                      "Analista de Tecnologia da Informação",
+                      "Técnico em Tecnologia da Informação",
+
+                      "Agente de Polícia Federal",
+                      "Escrivão de Polícia Federal",
+                      "Delegado de Polícia Federal",
+                      "Perito Criminal Federal",
+
+                      "Policial Rodoviário Federal",
+
+                      "Agente de Inteligência",
+                      "Oficial de Inteligência",
+
+                      "Fiscal",
+                      "Inspetor",
+                      "Agente de Fiscalização",
+
+                      "Professor",
+                      "Técnico em Assuntos Educacionais",
+
+                      "Pesquisador",
+                      "Tecnologista",
+
+                      "Carteiro",
+                      "Atendente Comercial",
+
+                      "Escriturário",
+                      "Analista Bancário"
+
+                    ]}
+                    placeholder="Selecione o tipo de questão"
+                    allowCustomValue
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Estado (opcional)</label>
+                    <Tooltip content="Número de questões a serem geradas (5 a 50)."
+                      position="bottom" />
+                  </div>
+                  <Select
+                    value={estado}
+                    onChange={setEstado}
+                    options={estados}
+                    placeholder="Estado"
+                    className="w-full"
+                    allowCustomValue
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Cidade (opcional)</label>
+                    <Tooltip content="Selecione a instituição organizadora do concurso. Caso não tenha a banca desejada pode digitar o nome dela e gere as questões normalmente"
+                      position="bottom"
+                    />
+                  </div>
+                  <Select
+                    value={cidade}
+                    onChange={setCidade}
+                    options={cidades}
+                    placeholder="Cidade"
+                    className="w-full"
+                    allowCustomValue
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Nível (opcional) </label>
+                    <Tooltip content="Selecione o formato das questões que deseja gerar."
+                      position="bottom" />
+                  </div>
+                  <Select
+                    value={nivel}
+                    onChange={setNivel}
+                    options={[
+                      "Médio",
+                      "Superior"
+                    ]}
+                    placeholder="Selecione o nível"
                   />
                 </div>
               </div>

@@ -6,9 +6,6 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-/* =========================
-   REQUEST – envia access token
-========================= */
 api.interceptors.request.use(
   (config) => {
     const token = Cookies.get("access_token");
@@ -20,9 +17,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/* =========================
-   RESPONSE – refresh automático
-========================= */
 let isRefreshing = false;
 let failedQueue: {
   resolve: (value?: unknown) => void;
