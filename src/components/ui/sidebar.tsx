@@ -1,8 +1,7 @@
 "use client";
-
-import { Brain, X, LogOut, LucideIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { logout } from "@/src/utils/logout";
+import { Brain, X, LogOut, LucideIcon, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type MenuItem = {
   icon: LucideIcon;
@@ -30,6 +29,7 @@ type SidebarProps = {
   newItemLabel?: string;
   newItemIcon?: LucideIcon;
   showListSection?: boolean;
+  onItemDelete?: (id: string) => void;
 };
 
 export default function Sidebar({
@@ -44,6 +44,7 @@ export default function Sidebar({
   newItemLabel = "Nova sessão",
   newItemIcon: NewItemIcon,
   showListSection = false,
+  onItemDelete
 }: SidebarProps) {
   const router = useRouter();
 
@@ -51,11 +52,11 @@ export default function Sidebar({
     <>
       {/* SIDEBAR */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         <div className="flex flex-col h-full">
-
           {/* Header */}
           <div className="h-16 px-4 border-b flex justify-between items-center">
             <div className="flex gap-3 items-center">
@@ -78,10 +79,11 @@ export default function Sidebar({
               <button
                 key={item.path}
                 onClick={() => router.push(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${item.active
-                  ? "bg-blue-50 text-blue-600"
-                  : "hover:bg-gray-100 text-gray-600"
-                  }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
+                  item.active
+                    ? "bg-blue-50 text-blue-600"
+                    : "hover:bg-gray-100 text-gray-600"
+                }`}
               >
                 <item.icon className="w-5 h-5" />
                 {item.label}
@@ -103,21 +105,47 @@ export default function Sidebar({
               )}
 
               {listItems.map((item) => (
-                <button
+                <div
                   key={item.id}
-                  onClick={() => onItemSelect && onItemSelect(item.id)}
-                  className={`w-full text-left px-4 py-3 rounded-lg border border-gray-300 ${activeItemId === item.id
-                    ? "bg-blue-50 border-blue-100"
-                    : "hover:bg-gray-50"
-                    }`}
+                  className={`group relative w-full rounded-lg border transition-all ${
+                    activeItemId === item.id
+                      ? "bg-blue-50 border-blue-200"
+                      : "border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                  }`}
                 >
-                  <p className="font-medium truncate text-gray-800">
-                    {item.title || item.sessionName || "Sem título"}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </p>
-                </button>
+                  <button
+                    onClick={() => onItemSelect && onItemSelect(item.id)}
+                    className="w-full text-left px-4 py-3 pr-12"
+                  >
+                    <p className="font-medium truncate text-gray-800">
+                      {item.title || item.sessionName || "Sem título"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </p>
+                  </button>
+
+                  {onItemDelete && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onItemDelete(item.id);
+                      }}
+                      className="
+                        absolute right-2 top-1/2 -translate-y-1/2
+                        p-1.5 rounded-md
+                        opacity-100 lg:opacity-0 lg:group-hover:opacity-100
+                        transition-all duration-200
+                        hover:bg-red-50
+                        active:bg-red-100
+                      "
+                      aria-label="Excluir item"
+                    >
+                      <Trash2 className="h-4 w-4 text-gray-400 hover:text-red-500 transition-colors" />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -138,15 +166,14 @@ export default function Sidebar({
       {sidebarOpen && (
         <div
           className="
-      fixed inset-0 z-40
-      bg-black/30     /* mobile */
-      lg:bg-black/50  /* desktop */
-      lg:hidden
-    "
+            fixed inset-0 z-40
+            bg-black/30     /* mobile */
+            lg:bg-black/50  /* desktop */
+            lg:hidden
+          "
           onClick={() => setSidebarOpen(false)}
         />
       )}
-
     </>
   );
-}
+} 

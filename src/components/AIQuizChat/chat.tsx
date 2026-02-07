@@ -186,7 +186,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       const payload = {
         prompt: topic,
         banca: banca || undefined,
-        quantidade: Number(quantity), // ✅ SEM null
+        quantidade: Number(quantity),
         type: questionType,
         orgao: orgao || undefined,
         cargo: cargo || undefined,
@@ -341,6 +341,22 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     });
   };
 
+  const handleDelete = async (sessionId: string) => {
+    try {
+      await api.delete(`/session/${sessionId}`);
+
+      if (sessionId === activeSessionId) {
+        setCurrentSession(null);
+        setActiveSessionId(null);
+        updateURL(null);
+      }
+
+      await loadSessions();
+    } catch (err) {
+      console.error("Erro ao deletar sessão", err);
+    }
+  };
+
   const resetQuiz = () => {
     setCurrentSession(null);
     setActiveSessionId(null);
@@ -405,6 +421,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
         newItemLabel="Nova sessão"
         newItemIcon={RotateCcw}
         showListSection={true}
+        onItemDelete={handleDelete}
       />
 
       {/* MAIN */}
