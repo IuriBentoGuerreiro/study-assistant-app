@@ -1,14 +1,8 @@
 "use client";
 import { logout } from "@/src/utils/logout";
-import { Brain, X, LogOut, LucideIcon, Trash2 } from "lucide-react";
+import { Brain, X, LogOut, LucideIcon, Trash2, LayoutDashboard, MessageSquare, FileText, CalendarIcon, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-type MenuItem = {
-  icon: LucideIcon;
-  label: string;
-  path: string;
-  active?: boolean;
-};
+import { usePathname } from "next/navigation";
 
 type ListItem = {
   id: string;
@@ -20,7 +14,6 @@ type ListItem = {
 type SidebarProps = {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  menuItems: MenuItem[];
   subtitle?: string;
   listItems?: ListItem[];
   activeItemId?: string | null;
@@ -35,7 +28,6 @@ type SidebarProps = {
 export default function Sidebar({
   sidebarOpen,
   setSidebarOpen,
-  menuItems,
   subtitle = "Assistente inteligente",
   listItems = [],
   activeItemId = null,
@@ -48,13 +40,23 @@ export default function Sidebar({
 }: SidebarProps) {
   const router = useRouter();
 
+  const pathname = usePathname();
+
+  const menuItems = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+    { icon: MessageSquare, label: "Chat", path: "/chat" },
+    { icon: FileText, label: "Resumos", path: "/resume" },
+    { icon: CalendarIcon, label: "Calendário", path: "/study-calendar", active: true },
+    { icon: Info, label: "Sobre", path: "/about" },
+  ];
+
+
   return (
     <>
       {/* SIDEBAR */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -75,20 +77,23 @@ export default function Sidebar({
 
           {/* Navigation */}
           <nav className="p-4 space-y-2 border-b">
-            {menuItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => router.push(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
-                  item.active
-                    ? "bg-blue-50 text-blue-600"
+            {menuItems.map((item) => {
+              const isActive = pathname === item.path;
+
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => router.push(item.path)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                    ? "bg-blue-50 text-blue-600 font-semibold"
                     : "hover:bg-gray-100 text-gray-600"
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-              </button>
-            ))}
+                    }`}
+                >
+                  <item.icon className={`w-5 h-5 ${isActive ? "text-blue-600" : "text-gray-500"}`} />
+                  {item.label}
+                </button>
+              );
+            })}
           </nav>
 
           {/* List Section */}
@@ -107,11 +112,10 @@ export default function Sidebar({
               {listItems.map((item) => (
                 <div
                   key={item.id}
-                  className={`group relative w-full rounded-lg border transition-all ${
-                    activeItemId === item.id
-                      ? "bg-blue-50 border-blue-200"
-                      : "border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                  }`}
+                  className={`group relative w-full rounded-lg border transition-all ${activeItemId === item.id
+                    ? "bg-blue-50 border-blue-200"
+                    : "border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                    }`}
                 >
                   <button
                     onClick={() => onItemSelect && onItemSelect(item.id)}
