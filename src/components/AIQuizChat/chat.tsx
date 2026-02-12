@@ -122,8 +122,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
   const loadSessions = async () => {
     try {
-      const userId = Number(sessionStorage.getItem("userId"));
-      const { data } = await api.get<SessionListItem[]>(`/session/${userId}`);
+      const { data } = await api.get<SessionListItem[]>(`/session`);
       setSessions(data);
     } catch (err) {
       console.error("Erro ao carregar sessões", err);
