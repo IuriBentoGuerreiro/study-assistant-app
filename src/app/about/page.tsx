@@ -3,8 +3,6 @@
 import { useState } from "react";
 import {
   Brain,
-  LayoutDashboard,
-  LogOut,
   MessageSquare,
   FileText,
   Sparkles,
@@ -12,7 +10,6 @@ import {
   BookOpen,
   Zap,
   CheckCircle,
-  Info,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/src/components/ui/sidebar";
@@ -21,13 +18,6 @@ import Header from "@/src/components/ui/header";
 export default function AboutPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: MessageSquare, label: "Chat", path: "/chat" },
-    { icon: FileText, label: "Resumos", path: "/resume" },
-    { icon: Info, label: "Sobre", path: "/about", active: true },
-  ];
 
   const features = [
     {
@@ -71,7 +61,6 @@ export default function AboutPage() {
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        menuItems={menuItems}
         subtitle="Assistente inteligente"
         showListSection={true}
       />

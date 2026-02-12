@@ -4,11 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Brain,
   RotateCcw,
-  LayoutDashboard,
   Loader2,
-  MessageSquare,
-  FileText,
-  Info,
   Trophy,
   CheckCircle2,
   XCircle,
@@ -372,13 +368,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     setShowResultsModal(false);
   };
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: MessageSquare, label: "Chat", path: "/chat", active: true },
-    { icon: FileText, label: "Resumos", path: "/resume" },
-    { icon: Info, label: "Sobre", path: "/about" },
-  ];
-
   const totalQuestions = currentSession?.questions.length ?? 0;
 
   const answeredQuestions =
@@ -411,7 +400,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        menuItems={menuItems}
         subtitle="Gerador de questões"
         listItems={sessions}
         activeItemId={activeSessionId}

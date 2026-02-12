@@ -2,12 +2,9 @@
 
 import { useState, useEffect } from "react";
 import {
-    LayoutDashboard,
     Loader2,
     FileText,
-    MessageSquare,
     RotateCcw,
-    Info,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/src/lib/api";
@@ -142,14 +139,6 @@ export default function AIResumeChat() {
         setSidebarOpen(false);
     };
 
-    const menuItems = [
-        { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-        { icon: MessageSquare, label: "Chat", path: "/chat" },
-        { icon: FileText, label: "Resumos", path: "/resume", active: true },
-        { icon: Info, label: "Sobre", path: "/about" },
-
-    ];
-
     return (
         <div className="flex h-screen bg-gray-50">
 
@@ -157,7 +146,6 @@ export default function AIResumeChat() {
             <Sidebar
                 sidebarOpen={sidebarOpen}
                 setSidebarOpen={setSidebarOpen}
-                menuItems={menuItems}
                 subtitle="Gerador de Resumos"
                 listItems={resumes}
                 activeItemId={activeResumeId}

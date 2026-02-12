@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { api } from "@/src/lib/api";
 import { StudyGoalRequest, StudyGoalResponse } from "@/src/types/StudyGoal";
+import { StudyDayRequest, StudyDayResponse } from "@/src/types/StudyDay";
 
 type StudySession = {
   date: string;
@@ -50,6 +51,9 @@ export default function StudyCalendar() {
   const [tempGoal, setTempGoal] = useState(60);
 
   const [goal, setGoal] = useState<StudyGoalResponse | null>(null);
+
+  const [studyDay, setStudyDay] = useState<StudyDayResponse | null>(null);
+
   const [loadingGoal, setLoadingGoal] = useState(true);
 
   // Dados mockados - substituir pela chamada da API
@@ -62,14 +66,6 @@ export default function StudyCalendar() {
     { date: "2026-02-08", studiedMinutes: 65 },
     { date: "2026-02-09", studiedMinutes: 30 },
   ]);
-
-  const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: MessageSquare, label: "Chat", path: "/chat" },
-    { icon: FileText, label: "Resumos", path: "/resume" },
-    { icon: CalendarIcon, label: "Calendário", path: "/calendar", active: true },
-    { icon: Info, label: "Sobre", path: "/about" },
-  ];
 
   // Timer effect
   useEffect(() => {
@@ -107,20 +103,13 @@ export default function StudyCalendar() {
     loadTodayProgress();
     loadStudySessions();
     loadStudyGoal();
+    loadStudyDayActive();
   }, []);
 
   const loadStudyGoal = async () => {
     try {
-      const userId = Number(sessionStorage.getItem("userId"));
-      
-      if (!userId) {
-        console.error("userId não encontrado no sessionStorage");
-        setLoadingGoal(false);
-        return;
-      }
+      const { data } = await api.get<StudyGoalResponse>(`/study-goal`);
 
-      const { data } = await api.get<StudyGoalResponse>(`/study-goal/${userId}`);
-      
       setGoal(data);
       setDailyGoalMinutes(data.dailyStudyMinutes);
       setTempGoal(data.dailyStudyMinutes);
@@ -214,24 +203,65 @@ export default function StudyCalendar() {
     }
   };
 
+  const loadStudyDayActive = async () => {
+    try {
+      const { data } = await api.get<StudyDayResponse>(`/study-day/user/active`);
+
+      setStudyDay(data);
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        setGoal(null);
+        console.log("Nenhuma meta encontrada para este usuário");
+      } else {
+        console.error("Erro ao carregar meta de estudos:", error);
+      }
+    } finally {
+      setLoadingGoal(false);
+    }
+  };
+
+  const createStudyDay = async (
+  ): Promise<StudyDayResponse> => {
+    try {
+
+      const { data } = await api.post<StudyDayResponse>(
+        "/study-day");
+
+      setIsTimerRunning(true)
+      setStudyDay(data)
+
+      return data;
+    } catch (error) {
+      console.error("Erro ao iniciar:", error);
+      throw error;
+    }
+  };
+
+  const finishStudyDay = async (
+  ): Promise<StudyDayResponse> => {
+    try {
+      if (!studyDay) throw new Error("Erro ao carregar");
+
+      const { data } = await api.put<StudyDayResponse>(
+        `/study-day/finish/${studyDay.id}`);
+
+      setIsTimerRunning(false)
+
+      return data;
+    } catch (error) {
+      console.error("Erro ao pausar:", error);
+      throw error;
+    }
+  };
+
   const createDailyGoal = async (
     request: StudyGoalRequest
   ): Promise<StudyGoalResponse> => {
     try {
-      const userId = Number(sessionStorage.getItem("userId"));
-
-      if (!userId) {
-        throw new Error("userId não encontrado");
-      }
-
-      const requestWithUserId = {
-        ...request,
-        userId: userId,
-      };
 
       const { data } = await api.post<StudyGoalResponse>(
         "/study-goal",
-        requestWithUserId
+        request
       );
 
       setGoal(data);
@@ -253,20 +283,9 @@ export default function StudyCalendar() {
     if (!goal) throw new Error("Meta não carregada");
 
     try {
-      const userId = Number(sessionStorage.getItem("userId"));
-
-      if (!userId) {
-        throw new Error("userId não encontrado");
-      }
-
-      const requestWithUserId = {
-        ...request,
-        userId: userId,
-      };
-
       const { data } = await api.put<StudyGoalResponse>(
         `/study-goal/${goal.id}`,
-        requestWithUserId
+        request
       );
 
       setGoal(data);
@@ -277,7 +296,6 @@ export default function StudyCalendar() {
       return data;
     } catch (error) {
       console.error("Erro ao atualizar meta:", error);
-      alert("Erro ao atualizar meta. Tente novamente.");
       throw error;
     }
   };
@@ -458,7 +476,6 @@ export default function StudyCalendar() {
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        menuItems={menuItems}
         subtitle="Acompanhamento de estudos"
         showListSection={false}
       />
@@ -500,7 +517,12 @@ export default function StudyCalendar() {
                 {formatTime(elapsedSeconds)}
               </div>
               <div className="text-sm text-blue-100">
-                {Math.floor(elapsedSeconds / 60)} de {dailyGoalMinutes} minutos
+
+                {!dailyGoalMinutes
+                  ? "Você ainda não definiu sua meta de estudos"
+                  : `${Math.floor(elapsedSeconds / 60)} de ${dailyGoalMinutes} minutos`
+                }
+
               </div>
             </div>
 
@@ -518,7 +540,7 @@ export default function StudyCalendar() {
             <div className="flex gap-3 justify-center">
               {!isTimerRunning ? (
                 <button
-                  onClick={() => setIsTimerRunning(true)}
+                  onClick={() => createStudyDay()}
                   className="flex items-center gap-2 bg-white text-blue-700 px-6 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-colors shadow-lg"
                 >
                   <Play className="w-5 h-5" />
@@ -526,7 +548,7 @@ export default function StudyCalendar() {
                 </button>
               ) : (
                 <button
-                  onClick={() => setIsTimerRunning(false)}
+                  onClick={() => finishStudyDay()}
                   className="flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors shadow-lg"
                 >
                   <Pause className="w-5 h-5" />
@@ -664,20 +686,17 @@ export default function StudyCalendar() {
                     key={index}
                     className={`
                       aspect-square rounded-xl p-2 border-2 transition-all cursor-pointer
-                      ${
-                        today
-                          ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
-                          : "border-gray-200"
+                      ${today
+                        ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200"
+                        : "border-gray-200"
                       }
-                      ${
-                        weekend && !today
-                          ? "bg-linear-to-br from-amber-50 to-yellow-50"
-                          : "bg-white"
+                      ${weekend && !today
+                        ? "bg-linear-to-br from-amber-50 to-yellow-50"
+                        : "bg-white"
                       }
-                      ${
-                        studied
-                          ? "bg-linear-to-br from-green-50 to-emerald-50 border-green-300"
-                          : ""
+                      ${studied
+                        ? "bg-linear-to-br from-green-50 to-emerald-50 border-green-300"
+                        : ""
                       }
                       hover:shadow-lg hover:scale-105 hover:border-blue-400
                       flex flex-col items-center justify-center relative
@@ -687,13 +706,12 @@ export default function StudyCalendar() {
                     <div
                       className={`
                       text-lg font-semibold
-                      ${
-                        today
+                      ${today
                           ? "text-blue-700"
                           : weekend
-                          ? "text-amber-700"
-                          : "text-gray-700"
-                      }
+                            ? "text-amber-700"
+                            : "text-gray-700"
+                        }
                     `}
                     >
                       {date.getDate()}
@@ -711,10 +729,9 @@ export default function StudyCalendar() {
                             <div
                               className="h-full bg-blue-500 rounded-full transition-all"
                               style={{
-                                width: `${
-                                  (session.studiedMinutes / dailyGoalMinutes) *
+                                width: `${(session.studiedMinutes / dailyGoalMinutes) *
                                   100
-                                }%`,
+                                  }%`,
                               }}
                             />
                           </div>
@@ -784,7 +801,8 @@ export default function StudyCalendar() {
                 </label>
                 <input
                   type="number"
-                  value={tempGoal}
+                  value={tempGoal ?? ""}
+                  placeholder="Digite Sua Meta"
                   onChange={(e) => setTempGoal(Number(e.target.value))}
                   min="5"
                   max="480"
