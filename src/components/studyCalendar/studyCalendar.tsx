@@ -13,6 +13,7 @@ import {
   Pause,
   RotateCcw,
   Settings,
+  CheckCircle2,
 } from "lucide-react";
 import Sidebar from "../ui/sidebar";
 import Header from "../ui/header";
@@ -32,20 +33,16 @@ export default function StudyCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Timer states
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(60);
   const [showSettings, setShowSettings] = useState(false);
   const [tempGoal, setTempGoal] = useState(60);
 
-  // API Data states
   const [goal, setGoal] = useState<StudyGoalResponse | null>(null);
   const [studyDay, setStudyDay] = useState<StudyDayResponse | null>(null);
   const [studySessions, setStudySessions] = useState<StudyDayResponse[]>([]);
   const [loadingGoal, setLoadingGoal] = useState(true);
-
-  // --- Effects ---
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -73,8 +70,6 @@ export default function StudyCalendar() {
     };
     init();
   }, []);
-
-  // --- API Functions ---
 
   const loadStudyGoal = async () => {
     try {
@@ -148,7 +143,6 @@ export default function StudyCalendar() {
   };
 
   const saveProgress = async (seconds: number) => {
-    // Implementar se necessário futuramente
     console.log("Saving progress:", seconds, "seconds");
   };
 
@@ -168,8 +162,6 @@ export default function StudyCalendar() {
     setShowSettings(false);
     return data;
   };
-
-  // --- Helpers ---
 
   const formatDate = (date: Date): string => date.toISOString().split("T")[0];
 
@@ -249,69 +241,126 @@ export default function StudyCalendar() {
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} subtitle="Estudos" showListSection={false} />
       <div className="flex-1 overflow-y-auto">
         <Header onMenuClick={() => setSidebarOpen(true)} title="Calendário de Estudos" />
-        <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+        <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-6">
 
           {/* Timer Card */}
-          <div className="bg-linear-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-6 shadow-xl text-white">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm"><Clock /></div>
+          <div className="bg-linear-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl text-white">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
                 <div>
-                  <h3 className="text-lg font-semibold">Sessão Atual</h3>
-                  <p className="text-sm text-blue-100">Meta: {dailyGoalMinutes} min</p>
+                  <h3 className="text-base sm:text-lg font-semibold">Sessão Atual</h3>
+                  <p className="text-xs sm:text-sm text-blue-100">Meta: {dailyGoalMinutes} min</p>
                 </div>
               </div>
-              <button onClick={() => { setTempGoal(dailyGoalMinutes); setShowSettings(true); }} className="p-2 bg-white/20 rounded-lg"><Settings className="w-5 h-5" /></button>
+              <button
+                onClick={() => {
+                  setTempGoal(dailyGoalMinutes);
+                  setShowSettings(true);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition-all backdrop-blur-sm group"
+              >
+                <Settings className="w-4 h-4 text-blue-100 group-hover:rotate-45 transition-transform" />
+                <span className="text-xs sm:text-sm font-medium text-white">
+                  Configurar meta
+                </span>
+              </button>
             </div>
-            <div className="text-center mb-6">
-              <div className="text-6xl font-bold font-mono">{formatTime(elapsedSeconds)}</div>
-              <div className="text-sm mt-2">{Math.floor(elapsedSeconds / 60)} de {dailyGoalMinutes} min</div>
+
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="text-4xl sm:text-6xl font-bold font-mono">{formatTime(elapsedSeconds)}</div>
+              <div className="text-xs sm:text-sm mt-2">{Math.floor(elapsedSeconds / 60)} de {dailyGoalMinutes} min</div>
             </div>
-            <div className="h-3 bg-white/20 rounded-full mb-6 overflow-hidden">
+
+            <div className="h-2 sm:h-3 bg-white/20 rounded-full mb-4 sm:mb-6 overflow-hidden">
               <div className="h-full bg-emerald-400 transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
-            <div className="flex gap-3 justify-center">
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
               {!isTimerRunning ? (
-                <button onClick={createStudyDay} className="bg-white text-blue-700 px-8 py-3 rounded-xl font-bold flex gap-2"><Play /> Iniciar</button>
+                <button
+                  onClick={createStudyDay}
+                  className="bg-white text-blue-700 px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors"
+                >
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5" /> Iniciar
+                </button>
               ) : (
-                <button onClick={finishStudyDay} className="bg-orange-500 text-white px-8 py-3 rounded-xl font-bold flex gap-2"><Pause /> Pausar/Finalizar</button>
+                <button
+                  onClick={finishStudyDay}
+                  className="bg-orange-500 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors"
+                >
+                  <Pause className="w-4 h-4 sm:w-5 sm:h-5" /> Pausar/Finalizar
+                </button>
               )}
-              <button onClick={() => { setIsTimerRunning(false); setElapsedSeconds(0); }} className="bg-white/20 px-6 py-3 rounded-xl"><RotateCcw /></button>
+              <button
+                onClick={() => { setIsTimerRunning(false); setElapsedSeconds(0); }}
+                className="bg-white/20 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl hover:bg-white/30 transition-colors flex items-center justify-center"
+              >
+                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatCard icon={<CalendarIcon className="text-blue-600" />} label="Dias" value={stats.totalDays} bg="bg-blue-100" />
-            <StatCard icon={<Flame className="text-orange-600" />} label="Streak" value={stats.currentStreak} bg="bg-orange-100" />
-            <StatCard icon={<Award className="text-purple-600" />} label="Recorde" value={stats.longestStreak} bg="bg-purple-100" />
-            <StatCard icon={<Clock className="text-green-600" />} label="Horas" value={`${Math.floor(stats.totalMinutes / 60)}h`} bg="bg-green-100" />
-            <StatCard icon={<TrendingUp className="text-cyan-600" />} label="Média" value={`${stats.averageMinutes}m`} bg="bg-cyan-100" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+            <StatCard icon={<CalendarIcon className="text-blue-600 w-4 h-4" />} label="Dias" value={stats.totalDays} bg="bg-blue-100" />
+            <StatCard icon={<Flame className="text-orange-600 w-4 h-4" />} label="Streak" value={stats.currentStreak} bg="bg-orange-100" />
+            <StatCard icon={<Award className="text-purple-600 w-4 h-4" />} label="Recorde" value={stats.longestStreak} bg="bg-purple-100" />
+            <StatCard icon={<Clock className="text-green-600 w-4 h-4" />} label="Horas" value={`${Math.floor(stats.totalMinutes / 60)}h`} bg="bg-green-100" />
+            <StatCard icon={<TrendingUp className="text-cyan-600 w-4 h-4" />} label="Média" value={`${stats.averageMinutes}m`} bg="bg-cyan-100" />
           </div>
 
           {/* Calendar Grid */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <button onClick={previousMonth} className="p-2 hover:bg-gray-100 rounded-lg text-gray-900 "><ChevronLeft /></button>
-              <h2 className="text-xl font-bold capitalize text-gray-900">{currentDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</h2>
-              <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg text-gray-900"><ChevronRight /></button>
+          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <button
+                onClick={previousMonth}
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-gray-900 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+              <h2 className="text-base sm:text-xl font-bold capitalize text-gray-900">
+                {currentDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+              </h2>
+              <button
+                onClick={nextMonth}
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-gray-900 transition-colors"
+              >
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
             </div>
-            <div className="grid grid-cols-7 gap-2 ">
+
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {["D", "S", "T", "Q", "Q", "S", "S"].map((day, index) => (
-                <div key={`${day}-${index}`} className="text-center text-xs font-bold text-gray-900 pb-2">
+                <div key={`${day}-${index}`} className="text-center text-[10px] sm:text-xs font-bold text-gray-900 pb-1 sm:pb-2">
                   {day}
                 </div>
-              ))}                {days.map((date, i) => {
+              ))}
+
+              {days.map((date, i) => {
                 if (!date) return <div key={i} />;
                 const session = getStudySessionByDate(date);
                 const isFinished = isDateStudied(date);
                 return (
-                  <div key={i} className={`aspect-square rounded-xl border-2 flex flex-col items-center justify-center relative transition-all ${isToday(date) ? 'border-blue-500 bg-blue-50' : 'border-gray-150'} ${isFinished ? 'bg-emerald-50 border-emerald-200' : ''}`}>
-                    <span className={`text-sm font-semibold ${isToday(date) ? 'text-blue-600' : 'text-gray-900'}`}>{date.getDate()}</span>
-                    {isFinished && <span className="text-[10px] mt-1">✅</span>}
+                  <div
+                    key={i}
+                    className={`aspect-square rounded-lg sm:rounded-xl border-2 flex flex-col items-center justify-center relative transition-all ${isToday(date) ? 'border-blue-500 bg-blue-50' : 'border-gray-150'
+                      } ${isFinished ? 'bg-emerald-50 border-emerald-200' : ''}`}
+                  >
+                    <span className={`text-xs sm:text-sm font-semibold ${isToday(date) ? 'text-blue-600' : 'text-gray-900'}`}>
+                      {date.getDate()}
+                    </span>
+                    {isFinished && (
+                      <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 mt-0.5" />
+                    )}
                     {session && !isFinished && session.studiedMinutes > 0 && (
-                      <div className="absolute bottom-1 w-1/2 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-400" style={{ width: `${(session.studiedMinutes / dailyGoalMinutes) * 100}%` }} />
+                      <div className="absolute bottom-0.5 sm:bottom-1 w-1/2 h-0.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-400"
+                          style={{ width: `${(session.studiedMinutes / dailyGoalMinutes) * 100}%` }}
+                        />
                       </div>
                     )}
                   </div>
@@ -324,13 +373,50 @@ export default function StudyCalendar() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
-            <h3 className="text-xl font-bold mb-4">Meta de Estudos</h3>
-            <input type="number" value={tempGoal} onChange={e => setTempGoal(Number(e.target.value))} className="w-full p-3 border rounded-xl mb-4" />
-            <div className="flex gap-2">
-              <button onClick={() => setShowSettings(false)} className="flex-1 py-2 bg-gray-100 rounded-lg">Sair</button>
-              <button onClick={handleSaveGoal} className="flex-1 py-2 bg-blue-600 text-white rounded-lg">Salvar</button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+
+            {/* Header do Modal */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Settings className="w-6 h-6 text-blue-700" />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900">
+                Ajustar Meta
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">
+                  Minutos de estudo por dia
+                </label>
+                <input
+                  type="number"
+                  value={tempGoal}
+                  onChange={e => setTempGoal(Number(e.target.value))}
+                  className="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl mb-2 text-lg font-bold text-slate-900 focus:border-blue-500 focus:ring-0 transition-colors outline-none"
+                  placeholder="Ex: 60"
+                />
+                <p className="text-xs font-medium text-slate-500 ml-1">
+                  Sua meta atual é de <span className="text-blue-600 font-bold">{dailyGoalMinutes} minutos</span>.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors border border-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveGoal}
+                  className="flex-1 py-3 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition-all active:scale-95"
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -341,12 +427,14 @@ export default function StudyCalendar() {
 
 function StatCard({ icon, label, value, bg }: { icon: any, label: string, value: any, bg: string }) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-100">
-      <div className="flex items-center gap-3 mb-1">
-        <div className={`w-8 h-8 ${bg} rounded-lg flex items-center justify-center`}>{icon}</div>
-        <span className="text-xs text-gray-500">{label}</span>
+    <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100">
+      <div className="flex items-center gap-2 sm:gap-3 mb-1">
+        <div className={`w-7 h-7 sm:w-8 sm:h-8 ${bg} rounded-lg flex items-center justify-center`}>
+          {icon}
+        </div>
+        <span className="text-[10px] sm:text-xs text-gray-500 font-medium">{label}</span>
       </div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
+      <div className="text-lg sm:text-2xl font-bold text-gray-900">{value}</div>
     </div>
   );
 }
