@@ -58,13 +58,6 @@ export default function DashboardView() {
     fetchData();
   }, []);
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", active: true },
-    { icon: MessageSquare, label: "Chat", path: "/chat" },
-    { icon: FileText, label: "Resumos", path: "/resume" },
-    { icon: Info, label: "Sobre", path: "/about" },
-  ];
-
   return (
     <div className="flex h-screen bg-gray-50">
 
@@ -72,7 +65,6 @@ export default function DashboardView() {
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        menuItems={menuItems}
         subtitle="Dashboard de controle"
         showListSection={true}
       />
