@@ -174,7 +174,17 @@ export default function StudyCalendar() {
 
   const getStudySessionByDate = (date: Date): StudyDayResponse | undefined => {
     const dateStr = formatDate(date);
-    return studySessions.find((s) => s.studyDate === dateStr);
+
+    const sessionsOfDay = studySessions.filter((s) => s.studyDate === dateStr);
+
+    if (sessionsOfDay.length === 0) return undefined;
+
+    const totalMinutes = sessionsOfDay.reduce((acc, curr) => acc + curr.studiedMinutes, 0);
+
+    return {
+      ...sessionsOfDay[0],
+      studiedMinutes: totalMinutes,
+    };
   };
 
   const isDateStudied = (date: Date): boolean => {
