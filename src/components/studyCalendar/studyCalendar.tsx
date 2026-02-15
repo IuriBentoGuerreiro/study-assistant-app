@@ -14,6 +14,7 @@ import {
   RotateCcw,
   Settings,
   CheckCircle2,
+  Trash,
 } from "lucide-react";
 import Sidebar from "../ui/sidebar";
 import Header from "../ui/header";
@@ -44,6 +45,13 @@ export default function StudyCalendar() {
   const [studySessions, setStudySessions] = useState<StudyDayResponse[]>([]);
   const [loadingGoal, setLoadingGoal] = useState(true);
 
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [sessionsOfSelectedDate, setSessionsOfSelectedDate] = useState<StudyDayResponse[]>([]);
+
+  const [manualMinutes, setManualMinutes] = useState<string>("");
+  const [manualStart, setManualStart] = useState("08:00");
+  const [manualEnd, setManualEnd] = useState("09:00");
+
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerRunning) {
@@ -71,6 +79,66 @@ export default function StudyCalendar() {
     init();
   }, []);
 
+  const handleDayClick = (date: Date) => {
+    const dateStr = formatDate(date);
+    const sessions = studySessions.filter(s => s.studyDate === dateStr);
+    setSessionsOfSelectedDate(sessions);
+    setSelectedDate(date);
+  };
+
+  const handleStudyDayManualSave = async (date: Date) => {
+    const [h1, m1] = manualStart.split(':').map(Number);
+    const [h2, m2] = manualEnd.split(':').map(Number);
+
+    const totalMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+
+    if (totalMinutes <= 0) {
+      alert("O horário de término deve ser maior que o de início.");
+      return;
+    }
+
+    try {
+      const dateStr = formatDate(date);
+
+      const request = {
+        studyDate: dateStr,
+        studiedMinutes: totalMinutes,
+        startTime: `${dateStr}T${manualStart}:00`,
+        endTime: `${dateStr}T${manualEnd}:00`
+      };
+
+      await api.post("/study-day/manual", request);
+
+      await loadStudySessions();
+
+      const dateQuery = formatDate(date);
+      const { data } = await api.get<StudyDayResponse[]>(
+        `/study-day/calendar?start=${dateQuery}&end=${dateQuery}`
+      );
+      setSessionsOfSelectedDate(data.filter(s => s.studyDate === dateQuery));
+
+      setManualMinutes("");
+    } catch (error) {
+      console.error("Erro ao registrar manualmente:", error);
+      alert("Erro ao salvar registro manual.");
+    }
+  };
+
+  const handleDeleteStudyDay = async (sessionId: number) => {
+    if (!confirm("Tem certeza que deseja excluir esta sessão de estudo?")) return;
+
+    try {
+      await api.delete(`/study-day/${sessionId}`);
+
+      setSessionsOfSelectedDate((prev) => prev.filter(s => s.id !== sessionId));
+
+      await loadStudySessions();
+
+    } catch (error) {
+      console.error("Erro ao excluir sessão:", error);
+      alert("Não foi possível excluir a sessão. Tente novamente.");
+    }
+  };
   const loadStudyGoal = async () => {
     try {
       const { data } = await api.get<StudyGoalResponse>(`/study-goal`);
@@ -213,7 +281,6 @@ export default function StudyCalendar() {
     const qualifiedDays = studySessions.filter(s => s.studiedMinutes >= dailyGoalMinutes);
     const totalMinutes = studySessions.reduce((sum, s) => sum + s.studiedMinutes, 0);
 
-    // Streak logic
     let currentStreak = 0;
     const sorted = [...studySessions].sort((a, b) => new Date(b.studyDate).getTime() - new Date(a.studyDate).getTime());
     let checkDate = new Date();
@@ -356,7 +423,9 @@ export default function StudyCalendar() {
                 return (
                   <div
                     key={i}
-                    className={`aspect-square rounded-lg sm:rounded-xl border-2 flex flex-col items-center justify-center relative transition-all ${isToday(date) ? 'border-blue-500 bg-blue-50' : 'border-gray-150'
+                    onClick={() => date && handleDayClick(date)}
+
+                    className={`cursor-pointer aspect-square rounded-lg sm:rounded-xl border-2 flex flex-col items-center justify-center relative transition-all ${isToday(date) ? 'border-blue-500 bg-blue-50' : 'border-gray-150'
                       } ${isFinished ? 'bg-emerald-50 border-emerald-200' : ''}`}
                   >
                     <span className={`text-xs sm:text-sm font-semibold ${isToday(date) ? 'text-blue-600' : 'text-gray-900'}`}>
@@ -427,6 +496,171 @@ export default function StudyCalendar() {
                   Confirmar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalhes do Dia */}
+      {selectedDate && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-200">
+
+            {/* Header */}
+            <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {selectedDate.toLocaleDateString("pt-BR", { day: '2-digit', month: 'long' })}
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">Histórico de atividades</p>
+              </div>
+              <button
+                onClick={() => setSelectedDate(null)}
+                className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Resumo de Metas */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-blue-600 block mb-1">Meta</span>
+                  <span className="text-xl font-bold text-slate-900">{dailyGoalMinutes} min</span>
+                </div>
+                <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 block mb-1">Restante</span>
+                  <span className="text-xl font-bold text-slate-900">
+                    {Math.max(0, dailyGoalMinutes - sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedMinutes, 0))} min
+                  </span>
+                </div>
+              </div>
+
+              {/* Modal de Detalhes do Dia */}
+
+              {selectedDate && (
+                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-200">
+
+                    {/* Header */}
+                    <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          {selectedDate.toLocaleDateString("pt-BR", { day: '2-digit', month: 'long' })}
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium">Histórico de atividades</p>
+                      </div>
+                      <button
+                        onClick={() => setSelectedDate(null)}
+                        className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="p-6 space-y-6">
+                      {/* Resumo de Metas */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                          <span className="text-[10px] uppercase tracking-wider font-bold text-blue-600 block mb-1">Meta</span>
+                          <span className="text-xl font-bold text-slate-900">{dailyGoalMinutes} min</span>
+                        </div>
+                        <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                          <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 block mb-1">Restante</span>
+                          <span className="text-xl font-bold text-slate-900">
+                            {Math.max(0, dailyGoalMinutes - sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedMinutes, 0))} min
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Seção de Registro Manual Estilo Clockify */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-3 ml-1">
+                          Entrada Manual (Início e Fim)
+                        </label>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <p className="text-[10px] font-bold text-slate-400 mb-1 ml-1">Início</p>
+                            <input
+                              type="time"
+                              value={manualStart}
+                              onChange={(e) => setManualStart(e.target.value)}
+                              className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-blue-500"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[10px] font-bold text-slate-400 mb-1 ml-1">Fim</p>
+                            <input
+                              type="time"
+                              value={manualEnd}
+                              onChange={(e) => setManualEnd(e.target.value)}
+                              className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-blue-500"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleStudyDayManualSave(selectedDate)}
+                            className="px-4 py-2.5 bg-blue-600 text-white text-xs font-extrabold rounded-lg hover:bg-blue-700 transition-all active:scale-95 shadow-md"
+                          >
+                            ADICIONAR
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Lista de Sessões (O Log) */}
+                      <div className="space-y-3">
+                        <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">
+                          Sessões do Dia
+                        </h4>
+                        <div className="max-h-52 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                          {sessionsOfSelectedDate.length > 0 ? (
+                            sessionsOfSelectedDate.map((session) => (
+                              <div key={session.id} className="group flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-blue-100 transition-all">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold text-slate-700">
+                                      {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
+                                      {session.endTime ? new Date(session.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium italic">Sessão registrada</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-mono font-bold text-slate-600">
+                                    {session.studiedMinutes} min
+                                  </span>
+                                  <button
+                                    onClick={() => session.id && handleDeleteStudyDay(session.id)}
+                                    className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                                  >
+                                    <Trash className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-center py-6 text-sm text-slate-400 italic">Nenhuma sessão registrada.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setSelectedDate(null)}
+                        className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all active:scale-95"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => setSelectedDate(null)}
+                className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all active:scale-95"
+              >
+                Fechar
+              </button>
             </div>
           </div>
         </div>
