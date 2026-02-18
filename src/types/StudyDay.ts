@@ -1,4 +1,5 @@
 export interface StudyDayRequest {
+  description: string;
   studyDate: string;
   studiedMinutes: number;
   completed: boolean;
@@ -10,6 +11,7 @@ export interface StudyDayRequest {
 export interface StudyDayResponse {
   id: number;
   userId: number;
+  description: string;
   studyDate: string;
   studiedMinutes: number;
   startTime: string;
