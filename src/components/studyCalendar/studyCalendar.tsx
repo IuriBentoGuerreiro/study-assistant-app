@@ -28,20 +28,25 @@ type StudyStats = {
 };
 
 // ─── Utilitários de timezone ───────────────────────────────────────────────────
-function toLocalTimeString(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString("pt-BR", {
+function parseLocalDateTime(dateTime: string): Date {
+  const [datePart, timePart] = dateTime.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute, second] = timePart.split(":").map(Number);
+
+  return new Date(year, month - 1, day, hour, minute, second || 0);
+}
+
+function toLocalTimeString(dateTime: string): string {
+  return parseLocalDateTime(dateTime).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
 }
 
 function rebuildISOWithLocalTime(originalISO: string, newHHMM: string): string {
-  const [hours, minutes] = newHHMM.split(":").map(Number);
-  const date = new Date(originalISO);
-  date.setHours(hours, minutes, 0, 0);
-  return date.toISOString();
+  const [datePart] = originalISO.split("T");
+  return `${datePart}T${newHHMM}:00`;
 }
 
 export default function StudyCalendar() {
@@ -71,7 +76,7 @@ export default function StudyCalendar() {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerRunning && studyDay?.startTime) {
       const tick = () => {
-        const start = new Date(studyDay.startTime).getTime();
+        const start = parseLocalDateTime(studyDay.startTime).getTime();
         const elapsed = Math.max(0, Math.floor((Date.now() - start) / 1000));
         setElapsedSeconds(elapsed);
         if (elapsed % 60 === 0 && elapsed > 0) saveProgress(elapsed);
@@ -238,7 +243,12 @@ export default function StudyCalendar() {
         setStudyDay(data);
         setDescription(data.description ?? "");
         setIsTimerRunning(true);
-        const elapsed = Math.max(0, Math.floor((Date.now() - new Date(data.startTime).getTime()) / 1000));
+
+        const elapsed = Math.max(
+          0,
+          Math.floor((Date.now() - parseLocalDateTime(data.startTime).getTime()) / 1000)
+        );
+        
         setElapsedSeconds(elapsed);
       }
     } catch {
