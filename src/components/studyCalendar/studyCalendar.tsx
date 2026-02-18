@@ -27,6 +27,23 @@ type StudyStats = {
   averageMinutes: number;
 };
 
+// ─── Utilitários de timezone ───────────────────────────────────────────────────
+function toLocalTimeString(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
+}
+
+function rebuildISOWithLocalTime(originalISO: string, newHHMM: string): string {
+  const [hours, minutes] = newHHMM.split(":").map(Number);
+  const date = new Date(originalISO);
+  date.setHours(hours, minutes, 0, 0);
+  return date.toISOString();
+}
+
 export default function StudyCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -49,6 +66,7 @@ export default function StudyCalendar() {
   const [manualEnd, setManualEnd] = useState("09:00");
   const [description, setDescription] = useState("");
 
+  // ─── Timer — baseado em Date.now() - startTime, não em incremento de +1s ──
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerRunning && studyDay?.startTime) {
@@ -75,6 +93,7 @@ export default function StudyCalendar() {
     init();
   }, []);
 
+  // ─── Handlers ─────────────────────────────────────────────────────────────
 
   const handleDayClick = (date: Date) => {
     const dateStr = formatDate(date);
@@ -183,6 +202,8 @@ export default function StudyCalendar() {
     }
   };
 
+  // ─── Loaders ──────────────────────────────────────────────────────────────
+
   const loadStudyGoal = async () => {
     try {
       const { data } = await api.get<StudyGoalResponse>(`/study-goal`);
@@ -217,9 +238,8 @@ export default function StudyCalendar() {
         setStudyDay(data);
         setDescription(data.description ?? "");
         setIsTimerRunning(true);
-        const start = new Date(data.startTime).getTime();
-        const now = new Date().getTime();
-        setElapsedSeconds(Math.max(0, Math.floor((now - start) / 1000)));
+        const elapsed = Math.max(0, Math.floor((Date.now() - new Date(data.startTime).getTime()) / 1000));
+        setElapsedSeconds(elapsed);
       }
     } catch {
       console.log("Nenhuma sessão ativa encontrada");
@@ -270,6 +290,8 @@ export default function StudyCalendar() {
     setShowSettings(false);
     return data;
   };
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
 
   const formatDate = (date: Date): string => {
     const year = date.getFullYear();
@@ -348,9 +370,7 @@ export default function StudyCalendar() {
 
   if (loadingGoal) return <div className="h-screen flex items-center justify-center">Carregando...</div>;
 
-  const timerStartTimeValue = studyDay?.startTime
-    ? new Date(studyDay.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : "";
+  const timerStartTimeValue = studyDay?.startTime ? toLocalTimeString(studyDay.startTime) : "";
 
   return (
     <div className="flex h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -359,11 +379,13 @@ export default function StudyCalendar() {
         <Header onMenuClick={() => setSidebarOpen(true)} title="Calendário de Estudos" />
         <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-6">
 
+          {/* ── Timer Toolbar ──────────────────────────────────────────────── */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
             <div className="flex flex-col lg:flex-row items-center p-3 lg:p-4 gap-3 lg:gap-4">
 
               <div className="flex-1 w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
 
+                {/* Descrição */}
                 <div className="flex-1 relative group">
                   <input
                     type="text"
@@ -380,10 +402,10 @@ export default function StudyCalendar() {
                   <div className="absolute bottom-0 left-0 h-0.5 w-0 bg-blue-500 transition-all duration-300 group-focus-within:w-full" />
                 </div>
 
+                {/* Hora de início — só visível com timer ativo */}
                 {isTimerRunning && studyDay && (
                   <>
                     <div className="hidden sm:block w-px h-8 bg-slate-100 shrink-0" />
-
                     <div className="relative group/starttime shrink-0 mt-1 sm:mt-0">
                       <label className="absolute -top-3.5 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
                         Início
@@ -399,10 +421,10 @@ export default function StudyCalendar() {
                           className="text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-11.5 p-0 cursor-pointer"
                           onBlur={(e) => {
                             if (!e.target.value || !studyDay) return;
-                            const [hours, minutes] = e.target.value.split(":").map(Number);
-                            const newStart = new Date(studyDay.startTime);
-                            newStart.setHours(hours, minutes, 0, 0);
-                            handleUpdateCurrentSession({ startTime: newStart.toISOString() });
+                            // rebuildISOWithLocalTime usa date.setHours() (local),
+                            // então "16:00" salva 16h no fuso do usuário, não 16h UTC
+                            const newISO = rebuildISOWithLocalTime(studyDay.startTime, e.target.value);
+                            handleUpdateCurrentSession({ startTime: newISO });
                           }}
                         />
                       </div>
@@ -413,6 +435,7 @@ export default function StudyCalendar() {
 
               <div className="hidden lg:block w-px h-10 bg-slate-100 shrink-0" />
 
+              {/* Contador + botão */}
               <div className="flex items-center justify-between w-full lg:w-auto gap-6 lg:gap-8 px-2 lg:px-0">
                 <div className="flex flex-col items-start lg:items-end">
                   <span className="text-4xl font-mono font-bold text-slate-800 tabular-nums tracking-tight">
@@ -447,13 +470,11 @@ export default function StudyCalendar() {
             </div>
 
             <div className="w-full h-1 bg-slate-50">
-              <div
-                className="h-full bg-blue-500 transition-all duration-1000 ease-linear"
-                style={{ width: `${progress}%` }}
-              />
+              <div className="h-full bg-blue-500 transition-all duration-1000 ease-linear" style={{ width: `${progress}%` }} />
             </div>
           </div>
 
+          {/* ── Stats Cards ────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
             <StatCard icon={<CalendarIcon className="text-blue-600 w-4 h-4" />} label="Dias" value={stats.totalDays} bg="bg-blue-100" />
             <StatCard icon={<Flame className="text-orange-600 w-4 h-4" />} label="Streak" value={stats.currentStreak} bg="bg-orange-100" />
@@ -462,6 +483,7 @@ export default function StudyCalendar() {
             <StatCard icon={<TrendingUp className="text-cyan-600 w-4 h-4" />} label="Média" value={`${stats.averageMinutes}m`} bg="bg-cyan-100" />
           </div>
 
+          {/* ── Calendar Grid ──────────────────────────────────────────────── */}
           <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <button onClick={previousMonth} className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-gray-900 transition-colors">
@@ -474,12 +496,9 @@ export default function StudyCalendar() {
                 <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
-
             <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {["D", "S", "T", "Q", "Q", "S", "S"].map((day, index) => (
-                <div key={`${day}-${index}`} className="text-center text-[10px] sm:text-xs font-bold text-gray-900 pb-1 sm:pb-2">
-                  {day}
-                </div>
+                <div key={`${day}-${index}`} className="text-center text-[10px] sm:text-xs font-bold text-gray-900 pb-1 sm:pb-2">{day}</div>
               ))}
               {days.map((date, i) => {
                 if (!date) return <div key={i} />;
@@ -510,6 +529,7 @@ export default function StudyCalendar() {
         </div>
       </div>
 
+      {/* ── Settings Modal ─────────────────────────────────────────────────── */}
       {showSettings && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
@@ -534,22 +554,18 @@ export default function StudyCalendar() {
                 </p>
               </div>
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors border border-slate-200">
-                  Cancelar
-                </button>
-                <button onClick={handleSaveGoal} className="flex-1 py-3 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition-all active:scale-95">
-                  Confirmar
-                </button>
+                <button onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors border border-slate-200">Cancelar</button>
+                <button onClick={handleSaveGoal} className="flex-1 py-3 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition-all active:scale-95">Confirmar</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* ── Day Detail Modal ───────────────────────────────────────────────── */}
       {selectedDate && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedDate(null)} />
-
           <div className="relative bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
 
             <div className="shrink-0 px-5 pt-5 pb-4 border-b border-slate-100 bg-linear-to-b from-white to-slate-50">
@@ -561,11 +577,10 @@ export default function StudyCalendar() {
                     {selectedDate.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
                   </h3>
                 </div>
-                <button onClick={() => setSelectedDate(null)} className="mt-0.5 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0" aria-label="Fechar">
+                <button onClick={() => setSelectedDate(null)} className="mt-0.5 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
               </div>
-
               <div className="flex gap-2 mt-4">
                 <div className="flex-1 flex flex-col gap-0.5 bg-white border border-slate-100 rounded-xl px-3 py-2.5 shadow-sm">
                   <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Meta diária</span>
@@ -584,16 +599,12 @@ export default function StudyCalendar() {
                   </span>
                 </div>
               </div>
-
               {(() => {
                 const total = sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedMinutes, 0);
                 const pct = Math.min(100, Math.round((total / dailyGoalMinutes) * 100));
                 return (
                   <div className="mt-3">
-                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1">
-                      <span>Progresso</span>
-                      <span>{pct}%</span>
-                    </div>
+                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1"><span>Progresso</span><span>{pct}%</span></div>
                     <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full bg-linear-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
                     </div>
@@ -604,19 +615,12 @@ export default function StudyCalendar() {
 
             <div className="flex-1 overflow-y-auto overscroll-contain">
               <div className="p-5 space-y-5">
-
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Registrar sessão</p>
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
                     <div>
                       <label className="text-[10px] font-bold text-slate-400 block mb-1.5">O que você estudou?</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Revisão de Anatomia"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder:text-slate-300 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
-                      />
+                      <input type="text" placeholder="Ex: Revisão de Anatomia" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder:text-slate-300 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all" />
                     </div>
                     <div className="flex gap-2">
                       <div className="flex-1">
@@ -628,10 +632,7 @@ export default function StudyCalendar() {
                         <input type="time" value={manualEnd} onChange={(e) => setManualEnd(e.target.value)} className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all" />
                       </div>
                     </div>
-                    <button
-                      onClick={() => selectedDate && handleStudyDayManualSave(selectedDate)}
-                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-black rounded-xl transition-all shadow-md shadow-blue-100 uppercase tracking-wide"
-                    >
+                    <button onClick={() => selectedDate && handleStudyDayManualSave(selectedDate)} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-black rounded-xl transition-all shadow-md shadow-blue-100 uppercase tracking-wide">
                       Adicionar sessão
                     </button>
                   </div>
@@ -642,16 +643,13 @@ export default function StudyCalendar() {
                   <div className="space-y-2">
                     {sessionsOfSelectedDate.length > 0 ? (
                       sessionsOfSelectedDate.map((session) => {
-                        const currentStart = new Date(session.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                        const currentEnd = session.endTime ? new Date(session.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+                        // toLocalTimeString — corrige o bug de timezone em produção
+                        const currentStart = toLocalTimeString(session.startTime);
+                        const currentEnd = session.endTime ? toLocalTimeString(session.endTime) : "";
 
                         return (
-                          <div
-                            key={session.id}
-                            className="group flex items-center gap-3 px-4 py-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-sm transition-all focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-50"
-                          >
+                          <div key={session.id} className="group flex items-center gap-3 px-4 py-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-sm transition-all focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-50">
                             <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-400 group-focus-within:bg-blue-500 transition-colors shrink-0" />
-
                             <div className="flex-1 min-w-0">
                               <input
                                 type="text"
@@ -664,16 +662,11 @@ export default function StudyCalendar() {
                                 }}
                               />
                             </div>
-
                             <div className="flex items-center gap-1 shrink-0">
                               <div className="relative group/time">
-                                <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">
-                                  Início
-                                </label>
+                                <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">Início</label>
                                 <div className="flex items-center gap-1 bg-white border border-slate-200 group-hover/time:border-blue-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 rounded-lg px-2 py-1.5 transition-all cursor-text">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 group-hover/time:text-blue-400 group-focus-within/time:text-blue-500 transition-colors shrink-0">
-                                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                                  </svg>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 group-hover/time:text-blue-400 group-focus-within/time:text-blue-500 transition-colors shrink-0"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                                   <input
                                     type="time"
                                     defaultValue={currentStart}
@@ -685,19 +678,11 @@ export default function StudyCalendar() {
                                   />
                                 </div>
                               </div>
-
-                              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-slate-300 shrink-0 mx-0.5">
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                              </svg>
-
+                              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-slate-300 shrink-0 mx-0.5"><line x1="5" y1="12" x2="19" y2="12" /></svg>
                               <div className="relative group/time">
-                                <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">
-                                  Fim
-                                </label>
+                                <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">Fim</label>
                                 <div className="flex items-center gap-1 bg-white border border-slate-200 group-hover/time:border-blue-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 rounded-lg px-2 py-1.5 transition-all cursor-text">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 group-hover/time:text-blue-400 group-focus-within/time:text-blue-500 transition-colors shrink-0">
-                                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                                  </svg>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 group-hover/time:text-blue-400 group-focus-within/time:text-blue-500 transition-colors shrink-0"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                                   <input
                                     type="time"
                                     defaultValue={currentEnd}
@@ -710,16 +695,8 @@ export default function StudyCalendar() {
                                 </div>
                               </div>
                             </div>
-
-                            <span className="text-xs font-black text-slate-400 w-8 text-right shrink-0 tabular-nums">
-                              {session.studiedMinutes}m
-                            </span>
-
-                            <button
-                              onClick={() => session.id && handleDeleteStudyDay(session.id)}
-                              className="shrink-0 p-1.5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                              title="Excluir sessão"
-                            >
+                            <span className="text-xs font-black text-slate-400 w-8 text-right shrink-0 tabular-nums">{session.studiedMinutes}m</span>
+                            <button onClick={() => session.id && handleDeleteStudyDay(session.id)} className="shrink-0 p-1.5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100" title="Excluir sessão">
                               <Trash className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -740,10 +717,7 @@ export default function StudyCalendar() {
             </div>
 
             <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white">
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="w-full py-3 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-sm font-black rounded-xl transition-all tracking-wide"
-              >
+              <button onClick={() => setSelectedDate(null)} className="w-full py-3 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-sm font-black rounded-xl transition-all tracking-wide">
                 Fechar
               </button>
             </div>
