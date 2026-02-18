@@ -66,7 +66,7 @@ export default function StudyCalendar() {
   const [manualEnd, setManualEnd] = useState("09:00");
   const [description, setDescription] = useState("");
 
-  // ─── Timer — baseado em Date.now() - startTime, não em incremento de +1s ──
+  // ─── Timer 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerRunning && studyDay?.startTime) {
@@ -87,8 +87,8 @@ export default function StudyCalendar() {
   useEffect(() => {
     const init = async () => {
       await loadStudyGoal();
-      await loadStudyDayActive();
       await loadStudySessions();
+      await loadStudyDayActive();
     };
     init();
   }, []);
@@ -421,8 +421,6 @@ export default function StudyCalendar() {
                           className="text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-11.5 p-0 cursor-pointer"
                           onBlur={(e) => {
                             if (!e.target.value || !studyDay) return;
-                            // rebuildISOWithLocalTime usa date.setHours() (local),
-                            // então "16:00" salva 16h no fuso do usuário, não 16h UTC
                             const newISO = rebuildISOWithLocalTime(studyDay.startTime, e.target.value);
                             handleUpdateCurrentSession({ startTime: newISO });
                           }}
@@ -643,7 +641,6 @@ export default function StudyCalendar() {
                   <div className="space-y-2">
                     {sessionsOfSelectedDate.length > 0 ? (
                       sessionsOfSelectedDate.map((session) => {
-                        // toLocalTimeString — corrige o bug de timezone em produção
                         const currentStart = toLocalTimeString(session.startTime);
                         const currentEnd = session.endTime ? toLocalTimeString(session.endTime) : "";
 
