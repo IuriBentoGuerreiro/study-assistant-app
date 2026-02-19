@@ -495,7 +495,7 @@ export default function StudyCalendar() {
 
               <div className="flex items-center justify-between w-full lg:w-auto gap-6 lg:gap-8 px-2 lg:px-0">
                 <div className="flex flex-col items-start lg:items-end">
-                  <span className="text-4xl font-mono font-bold text-slate-800 tabular-nums tracking-tight">
+                  <span className="text-3xl font-mono font-bold text-slate-800 tabular-nums tracking-tight">
                     {formatTime(elapsedSeconds)}
                   </span>
                   <span className="text-xs text-slate-400 font-medium mt-0.5">
