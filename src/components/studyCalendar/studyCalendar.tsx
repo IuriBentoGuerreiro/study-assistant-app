@@ -514,34 +514,39 @@ export default function StudyCalendar() {
                   {!isTimerRunning ? (
                     <button
                       onClick={() => createStudyDay(description)}
-                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-lg shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2"
+                      className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center"
+                      title="START"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        width="13"
-                        height="13"
+                        width="20"
+                        height="20"
                         viewBox="0 0 24 24"
                         fill="currentColor"
                       >
                         <polygon points="5 3 19 12 5 21 5 3" />
                       </svg>
-                      START
                     </button>
                   ) : (
                     <button
                       onClick={finishStudyDay}
-                      className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-black rounded-lg shadow-lg shadow-red-200 transition-all active:scale-95 flex items-center gap-2"
+                      className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg shadow-red-200 transition-all active:scale-95 flex items-center justify-center"
+                      title="STOP"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        width="13"
-                        height="13"
+                        width="20"
+                        height="20"
                         viewBox="0 0 24 24"
-                        fill="currentColor"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       >
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="10" y1="4" x2="10" y2="20"></line>
+                        <line x1="14" y1="4" x2="14" y2="20"></line>
                       </svg>
-                      STOP
                     </button>
                   )}
                 </div>
