@@ -428,7 +428,7 @@ export default function StudyCalendar() {
         <Header onMenuClick={() => setSidebarOpen(true)} title="Calendário de Estudos" />
         <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-8">
 
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
             <div className="flex flex-col lg:flex-row items-center p-3 lg:p-4 gap-3 lg:gap-4">
               <div className="flex-1 w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="flex-1 relative group">
@@ -474,7 +474,8 @@ export default function StudyCalendar() {
                           type="time"
                           key={timerStartTimeValue}
                           defaultValue={timerStartTimeValue}
-                          className="text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-11.5 p-0 cursor-pointer"
+                          className="text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5
+ p-0 cursor-pointer"
                           onBlur={(e) => {
                             if (!e.target.value || !studyDay) return;
                             const newISO = rebuildISOWithLocalTime(
@@ -546,7 +547,7 @@ export default function StudyCalendar() {
                 </div>
               </div>
             </div>
-            <div className="w-full h-1 bg-slate-50">
+            <div className="w-full h-1 bg-slate-50 rounded-b-xl overflow-hidden">
               <div
                 className="h-full bg-blue-500 transition-all duration-1000 ease-linear"
                 style={{ width: `${progress}%` }}
@@ -850,15 +851,15 @@ export default function StudyCalendar() {
                         return (
                           <div
                             key={session.id}
-                            className="group flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-sm transition-all focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-50"
+                            className="group flex flex-col gap-2 px-3 sm:px-4 py-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-sm transition-all focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-50"
                           >
-                            <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-400 group-focus-within:bg-blue-500 transition-colors shrink-0" />
-                            <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-400 group-focus-within:bg-blue-500 transition-colors shrink-0 mt-0.5" />
                               <input
                                 type="text"
                                 defaultValue={session.description}
                                 placeholder="Descrição"
-                                className="w-full text-sm font-semibold text-slate-800 bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 truncate"
+                                className="flex-1 min-w-0 text-sm font-semibold text-slate-800 bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300"
                                 onBlur={(e) => {
                                   if (e.target.value !== session.description)
                                     handleUpdateSession(
@@ -869,8 +870,15 @@ export default function StudyCalendar() {
                                     );
                                 }}
                               />
+                              <button
+                                onClick={() => session.id && handleDeleteStudyDay(session.id)}
+                                className="shrink-0 p-1.5 text-red-400 hover:text-red-700 hover:bg-red-100 rounded-lg transition-all"
+                                title="Excluir sessão"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </button>
                             </div>
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex items-center gap-2 pl-4">
                               <div className="relative group/time">
                                 <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">
                                   Início
@@ -894,7 +902,8 @@ export default function StudyCalendar() {
                                   <input
                                     type="time"
                                     defaultValue={currentStart}
-                                    className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-10.5 sm:w-11.5 p-0 cursor-pointer"
+                                    className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5
+ p-0 cursor-pointer"
                                     onBlur={(e) => {
                                       if (e.target.value && e.target.value !== currentStart)
                                         handleUpdateSession(
@@ -943,7 +952,8 @@ export default function StudyCalendar() {
                                   <input
                                     type="time"
                                     defaultValue={currentEnd}
-                                    className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-10.5 sm:w-11.5 p-0 cursor-pointer"
+                                    className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5
+ p-0 cursor-pointer"
                                     onBlur={(e) => {
                                       if (e.target.value && e.target.value !== currentEnd)
                                         handleUpdateSession(
@@ -956,17 +966,10 @@ export default function StudyCalendar() {
                                   />
                                 </div>
                               </div>
+                              <span className="text-xs font-black text-slate-400 shrink-0 tabular-nums ml-auto">
+                                {safeMinutes(session.studiedSeconds)}m
+                              </span>
                             </div>
-                            <span className="text-xs font-black text-slate-400 w-7 sm:w-8 text-right shrink-0 tabular-nums">
-                              {safeMinutes(session.studiedSeconds)}m
-                            </span>
-                            <button
-                              onClick={() => session.id && handleDeleteStudyDay(session.id)}
-                              className="shrink-0 p-1.5 text-red-400 hover:text-red-700 hover:bg-red-100 rounded-lg transition-all"
-                              title="Excluir sessão"
-                            >
-                              <Trash className="w-4 h-4" />
-                            </button>
                           </div>
                         );
                       })
