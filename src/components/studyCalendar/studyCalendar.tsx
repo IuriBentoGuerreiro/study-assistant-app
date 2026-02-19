@@ -248,7 +248,7 @@ export default function StudyCalendar() {
           0,
           Math.floor((Date.now() - parseLocalDateTime(data.startTime).getTime()) / 1000)
         );
-        
+
         setElapsedSeconds(elapsed);
       }
     } catch {
@@ -450,31 +450,40 @@ export default function StudyCalendar() {
                   <span className="text-4xl font-mono font-bold text-slate-800 tabular-nums tracking-tight">
                     {formatTime(elapsedSeconds)}
                   </span>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isTimerRunning ? "bg-red-500 animate-pulse" : "bg-slate-300"}`} />
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                      {isTimerRunning ? "Gravando" : "Pausado"}
-                    </span>
-                  </div>
+                  <span className="text-xs text-slate-400 font-medium mt-0.5">
+                    {isTimerRunning ? "Gravando" : "Pausado"}
+                  </span>
                 </div>
 
-                {!isTimerRunning ? (
+                <div className="flex items-center gap-2">
+                  {/* Botão meta — discreto, mas acessível */}
                   <button
-                    onClick={() => createStudyDay(description)}
-                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-lg shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2"
+                    onClick={() => setShowSettings(true)}
+                    className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 text-xs font-bold rounded-lg transition-all border border-slate-200"
+                    title="Definir meta diária"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                    START
+                    <Award size={14} />
+                    Meta
                   </button>
-                ) : (
-                  <button
-                    onClick={finishStudyDay}
-                    className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-black rounded-lg shadow-lg shadow-red-200 transition-all active:scale-95 flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>
-                    STOP
-                  </button>
-                )}
+
+                  {!isTimerRunning ? (
+                    <button
+                      onClick={() => createStudyDay(description)}
+                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-lg shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                      START
+                    </button>
+                  ) : (
+                    <button
+                      onClick={finishStudyDay}
+                      className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-black rounded-lg shadow-lg shadow-red-200 transition-all active:scale-95 flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>
+                      STOP
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
