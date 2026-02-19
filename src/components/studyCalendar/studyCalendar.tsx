@@ -23,8 +23,8 @@ type StudyStats = {
   totalDays: number;
   currentStreak: number;
   longestStreak: number;
-  totalMinutes: number;
-  averageMinutes: number;
+  totalSeconds: number;
+  averageSeconds: number;
 };
 
 // ─── Utilitários de timezone ───────────────────────────────────────────────────
@@ -55,7 +55,7 @@ export default function StudyCalendar() {
 
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [dailyGoalMinutes, setDailyGoalMinutes] = useState(60);
+  const [dailyGoalSeconds, setDailyGoalSeconds] = useState(3600);
   const [showSettings, setShowSettings] = useState(false);
   const [tempGoal, setTempGoal] = useState(60);
 
@@ -115,7 +115,7 @@ export default function StudyCalendar() {
         description: updated.description,
         startTime: updated.startTime,
         studyDate: updated.studyDate,
-        studiedMinutes: updated.studiedMinutes ?? 0,
+        studiedSeconds: updated.studiedSeconds ?? 0,
       });
       setStudyDay(updated);
       if (fields.description !== undefined) setDescription(fields.description);
@@ -134,16 +134,16 @@ export default function StudyCalendar() {
       const dateStr = session.studyDate;
       const [h1, m1] = newStartTime.split(':').map(Number);
       const [h2, m2] = newEndTime.split(':').map(Number);
-      const totalMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+      const totalSeconds = ((h2 * 60 + m2) - (h1 * 60 + m1)) * 60;
 
-      if (totalMinutes < 0) {
+      if (totalSeconds < 0) {
         alert("O horário de fim deve ser posterior ao início.");
         return;
       }
 
       await api.put(`/study-day/${session.id}`, {
         description: newDescription || "Estudo sem título",
-        studiedMinutes: totalMinutes,
+        studiedSeconds: totalSeconds,
         studyDate: dateStr,
         startTime: `${dateStr}T${newStartTime.substring(0, 5)}:00`,
         endTime: newEndTime ? `${dateStr}T${newEndTime.substring(0, 5)}:00` : null,
@@ -165,9 +165,9 @@ export default function StudyCalendar() {
   const handleStudyDayManualSave = async (date: Date) => {
     const [h1, m1] = manualStart.split(':').map(Number);
     const [h2, m2] = manualEnd.split(':').map(Number);
-    const totalMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+    const totalSeconds = ((h2 * 60 + m2) - (h1 * 60 + m1)) * 60;
 
-    if (totalMinutes <= 0) {
+    if (totalSeconds <= 0) {
       alert("O horário de término deve ser maior que o de início.");
       return;
     }
@@ -176,7 +176,7 @@ export default function StudyCalendar() {
       const dateStr = formatDate(date);
       await api.post("/study-day/manual", {
         studyDate: dateStr,
-        studiedMinutes: totalMinutes,
+        studiedSeconds: totalSeconds,
         description: description || "Estudo sem título",
         startTime: `${dateStr}T${manualStart}:00`,
         endTime: `${dateStr}T${manualEnd}:00`,
@@ -213,7 +213,7 @@ export default function StudyCalendar() {
     try {
       const { data } = await api.get<StudyGoalResponse>(`/study-goal`);
       setGoal(data);
-      setDailyGoalMinutes(data.dailyStudyMinutes);
+      setDailyGoalSeconds(data.dailyStudyMinutes * 60);
       setTempGoal(data.dailyStudyMinutes);
     } catch (error: any) {
       if (error.response?.status === 404) setGoal(null);
@@ -287,7 +287,7 @@ export default function StudyCalendar() {
   const createDailyGoal = async (request: StudyGoalRequest) => {
     const { data } = await api.post<StudyGoalResponse>("/study-goal", request);
     setGoal(data);
-    setDailyGoalMinutes(data.dailyStudyMinutes);
+    setDailyGoalSeconds(data.dailyStudyMinutes * 60);
     setShowSettings(false);
     return data;
   };
@@ -296,7 +296,7 @@ export default function StudyCalendar() {
     if (!goal) return;
     const { data } = await api.put<StudyGoalResponse>(`/study-goal/${goal.id}`, request);
     setGoal(data);
-    setDailyGoalMinutes(data.dailyStudyMinutes);
+    setDailyGoalSeconds(data.dailyStudyMinutes * 60);
     setShowSettings(false);
     return data;
   };
@@ -321,13 +321,13 @@ export default function StudyCalendar() {
     const dateStr = formatDate(date);
     const sessionsOfDay = studySessions.filter((s) => s.studyDate === dateStr);
     if (sessionsOfDay.length === 0) return undefined;
-    const totalMinutes = sessionsOfDay.reduce((acc, curr) => acc + curr.studiedMinutes, 0);
-    return { ...sessionsOfDay[0], studiedMinutes: totalMinutes };
+    const totalSeconds = sessionsOfDay.reduce((acc, curr) => acc + curr.studiedSeconds, 0);
+    return { ...sessionsOfDay[0], studiedSeconds: totalSeconds };
   };
 
   const isDateStudied = (date: Date): boolean => {
     const session = getStudySessionByDate(date);
-    return session !== undefined && session.studiedMinutes >= dailyGoalMinutes;
+    return session !== undefined && session.studiedSeconds >= dailyGoalSeconds;
   };
 
   const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
@@ -347,13 +347,13 @@ export default function StudyCalendar() {
   };
 
   const calculateStats = (): StudyStats => {
-    const qualifiedDays = studySessions.filter(s => s.studiedMinutes >= dailyGoalMinutes);
-    const totalMinutes = studySessions.reduce((sum, s) => sum + s.studiedMinutes, 0);
+    const qualifiedDays = studySessions.filter(s => s.studiedSeconds >= dailyGoalSeconds);
+    const totalSeconds = studySessions.reduce((sum, s) => sum + s.studiedSeconds, 0);
     let currentStreak = 0;
     const sorted = [...studySessions].sort((a, b) => new Date(b.studyDate).getTime() - new Date(a.studyDate).getTime());
     let checkDate = new Date();
     for (const session of sorted) {
-      if (session.studyDate === formatDate(checkDate) && session.studiedMinutes >= dailyGoalMinutes) {
+      if (session.studyDate === formatDate(checkDate) && session.studiedSeconds >= dailyGoalSeconds) {
         currentStreak++;
         checkDate.setDate(checkDate.getDate() - 1);
       } else if (new Date(session.studyDate) < checkDate) break;
@@ -362,8 +362,8 @@ export default function StudyCalendar() {
       totalDays: qualifiedDays.length,
       currentStreak,
       longestStreak: 0,
-      totalMinutes,
-      averageMinutes: qualifiedDays.length > 0 ? Math.round(totalMinutes / qualifiedDays.length) : 0,
+      totalSeconds,
+      averageSeconds: qualifiedDays.length > 0 ? Math.round(totalSeconds / qualifiedDays.length) : 0,
     };
   };
 
@@ -375,8 +375,9 @@ export default function StudyCalendar() {
   };
 
   const stats = calculateStats();
-  const progress = Math.min((elapsedSeconds / (dailyGoalMinutes * 60)) * 100, 100);
+  const progress = Math.min((elapsedSeconds / dailyGoalSeconds) * 100, 100);
   const days = getDaysInMonth();
+  const dailyGoalMinutes = Math.floor(dailyGoalSeconds / 60);
 
   if (loadingGoal) return <div className="h-screen flex items-center justify-center">Carregando...</div>;
 
@@ -487,8 +488,8 @@ export default function StudyCalendar() {
             <StatCard icon={<CalendarIcon className="text-blue-600 w-4 h-4" />} label="Dias" value={stats.totalDays} bg="bg-blue-100" />
             <StatCard icon={<Flame className="text-orange-600 w-4 h-4" />} label="Streak" value={stats.currentStreak} bg="bg-orange-100" />
             <StatCard icon={<Award className="text-purple-600 w-4 h-4" />} label="Recorde" value={stats.longestStreak} bg="bg-purple-100" />
-            <StatCard icon={<Clock className="text-green-600 w-4 h-4" />} label="Horas" value={`${Math.floor(stats.totalMinutes / 60)}h`} bg="bg-green-100" />
-            <StatCard icon={<TrendingUp className="text-cyan-600 w-4 h-4" />} label="Média" value={`${stats.averageMinutes}m`} bg="bg-cyan-100" />
+            <StatCard icon={<Clock className="text-green-600 w-4 h-4" />} label="Horas" value={`${Math.floor(stats.totalSeconds / 3600)}h`} bg="bg-green-100" />
+            <StatCard icon={<TrendingUp className="text-cyan-600 w-4 h-4" />} label="Média" value={`${Math.floor(stats.averageSeconds / 60)}m`} bg="bg-cyan-100" />
           </div>
 
           {/* ── Calendar Grid ──────────────────────────────────────────────── */}
@@ -524,9 +525,9 @@ export default function StudyCalendar() {
                       {date.getDate()}
                     </span>
                     {isFinished && <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 mt-0.5" />}
-                    {session && !isFinished && session.studiedMinutes > 0 && (
+                    {session && !isFinished && session.studiedSeconds > 0 && (
                       <div className="absolute bottom-0.5 sm:bottom-1 w-1/2 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-400" style={{ width: `${(session.studiedMinutes / dailyGoalMinutes) * 100}%` }} />
+                        <div className="h-full bg-blue-400" style={{ width: `${(session.studiedSeconds / dailyGoalSeconds) * 100}%` }} />
                       </div>
                     )}
                   </div>
@@ -597,19 +598,19 @@ export default function StudyCalendar() {
                 <div className="flex-1 flex flex-col gap-0.5 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 shadow-sm">
                   <span className="text-[9px] font-extrabold uppercase tracking-widest text-blue-400">Estudado</span>
                   <span className="text-lg font-black text-blue-700 leading-none">
-                    {sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedMinutes, 0)} <span className="text-xs font-semibold text-blue-400">min</span>
+                    {Math.floor(sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedSeconds, 0) / 60)} <span className="text-xs font-semibold text-blue-400">min</span>
                   </span>
                 </div>
                 <div className="flex-1 flex flex-col gap-0.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5 shadow-sm">
                   <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-500">Restante</span>
                   <span className="text-lg font-black text-emerald-700 leading-none">
-                    {Math.max(0, dailyGoalMinutes - sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedMinutes, 0))} <span className="text-xs font-semibold text-emerald-400">min</span>
+                    {Math.max(0, Math.floor((dailyGoalSeconds - sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedSeconds, 0)) / 60))} <span className="text-xs font-semibold text-emerald-400">min</span>
                   </span>
                 </div>
               </div>
               {(() => {
-                const total = sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedMinutes, 0);
-                const pct = Math.min(100, Math.round((total / dailyGoalMinutes) * 100));
+                const totalSeconds = sessionsOfSelectedDate.reduce((acc, curr) => acc + curr.studiedSeconds, 0);
+                const pct = Math.min(100, Math.round((totalSeconds / dailyGoalSeconds) * 100));
                 return (
                   <div className="mt-3">
                     <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1"><span>Progresso</span><span>{pct}%</span></div>
@@ -702,7 +703,7 @@ export default function StudyCalendar() {
                                 </div>
                               </div>
                             </div>
-                            <span className="text-xs font-black text-slate-400 w-8 text-right shrink-0 tabular-nums">{session.studiedMinutes}m</span>
+                            <span className="text-xs font-black text-slate-400 w-8 text-right shrink-0 tabular-nums">{Math.floor(session.studiedSeconds / 60)}m</span>
                             <button onClick={() => session.id && handleDeleteStudyDay(session.id)} className="shrink-0 p-1.5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100" title="Excluir sessão">
                               <Trash className="w-3.5 h-3.5" />
                             </button>
