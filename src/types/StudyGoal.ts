@@ -1,9 +1,9 @@
 export interface StudyGoalRequest {
-  dailyStudyMinutes: number;
+  dailyStudySeconds: number;
 }
 
 export interface StudyGoalResponse {
   id: number;
   userId: number;
-  dailyStudyMinutes: number;
+  dailyStudySeconds: number;
 }

@@ -11,12 +11,15 @@ import {
   Settings,
   CheckCircle2,
   Trash,
+  Info,
 } from "lucide-react";
 import Sidebar from "../ui/sidebar";
 import Header from "../ui/header";
 import { api } from "@/src/lib/api";
 import { StudyGoalRequest, StudyGoalResponse } from "@/src/types/StudyGoal";
 import { StudyDayResponse } from "@/src/types/StudyDay";
+import { useToast } from "@/hooks/useToast";
+import ConfirmationModal from "../ui/confirmationModal";
 
 type StudyStats = {
   totalDays: number;
@@ -25,6 +28,14 @@ type StudyStats = {
   totalSeconds: number;
   averageSeconds: number;
 };
+
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0 && m > 0) return `${h}h ${m}min`;
+  if (h > 0) return `${h}h`;
+  return `${m}min`;
+}
 
 function parseLocalDateTime(dateTime: string): Date {
   const [datePart, timePart] = dateTime.split("T");
@@ -87,6 +98,13 @@ export default function StudyCalendar() {
   const [manualStart, setManualStart] = useState("08:00");
   const [manualEnd, setManualEnd] = useState("09:00");
   const [description, setDescription] = useState("");
+  const [tempGoalHours, setTempGoalHours] = useState(Math.floor(dailyGoalSeconds / 3600));
+  const [tempGoalMinutes, setTempGoalMinutes] = useState(Math.floor((dailyGoalSeconds % 3600) / 60));
+  const [tempGoalSecs, setTempGoalSecs] = useState(dailyGoalSeconds % 60);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+
+  const { toasts, showToast, setToasts } = useToast();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -140,7 +158,7 @@ export default function StudyCalendar() {
       setStudyDay(updated);
       if (fields.description !== undefined) setDescription(fields.description);
     } catch (error) {
-      console.error("Erro ao atualizar sessão ativa:", error);
+      showToast("Erro ao atualizar sessão ativa:", "error");
     }
   };
 
@@ -181,8 +199,7 @@ export default function StudyCalendar() {
       );
       setSessionsOfSelectedDate(data);
     } catch (error) {
-      console.error("Erro ao atualizar sessão:", error);
-      alert("Não foi possível salvar a alteração.");
+      showToast("Erro ao atualizar sessão:", "error");
     }
   };
 
@@ -191,13 +208,13 @@ export default function StudyCalendar() {
     const [h2, m2] = manualEnd.split(":").map(Number);
 
     if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) {
-      alert("Preencha os horários de início e fim.");
+      showToast("Preencha os horários de início e fim.", "error");
       return;
     }
 
     const totalSeconds = (h2 * 60 + m2 - (h1 * 60 + m1)) * 60;
     if (totalSeconds <= 0) {
-      alert("O horário de término deve ser maior que o de início.");
+      showToast("O horário de término deve ser maior que o de início.", "error");
       return;
     }
 
@@ -209,6 +226,7 @@ export default function StudyCalendar() {
         description: description || "Estudo sem título",
         startTime: `${dateStr}T${manualStart}:00`,
         endTime: `${dateStr}T${manualEnd}:00`,
+
       });
       await loadStudySessions();
       const { data } = await api.get<StudyDayResponse[]>(
@@ -216,21 +234,22 @@ export default function StudyCalendar() {
       );
       setSessionsOfSelectedDate(data.filter((s) => s.studyDate === dateStr));
       setDescription("");
+      showToast("Sessão registrada com sucesso!", "success");
     } catch (error) {
-      console.error("Erro ao registrar manualmente:", error);
-      alert("Erro ao salvar registro manual.");
+      showToast("Erro ao registrar manualmente:", "error");
     }
   };
 
   const handleDeleteStudyDay = async (sessionId: number) => {
-    if (!confirm("Tem certeza que deseja excluir esta sessão de estudo?")) return;
     try {
       await api.delete(`/study-day/${sessionId}`);
       setSessionsOfSelectedDate((prev) => prev.filter((s) => s.id !== sessionId));
       await loadStudySessions();
+
+      showToast("Sessão excluída com sucesso.", "success");
     } catch (error) {
       console.error("Erro ao excluir sessão:", error);
-      alert("Não foi possível excluir a sessão. Tente novamente.");
+      showToast("Não foi possível excluir a sessão.", "error");
     }
   };
 
@@ -238,8 +257,11 @@ export default function StudyCalendar() {
     try {
       const { data } = await api.get<StudyGoalResponse>(`/study-goal`);
       setGoal(data);
-      setDailyGoalSeconds(data.dailyStudyMinutes * 60);
-      setTempGoal(data.dailyStudyMinutes);
+      const seconds = data.dailyStudySeconds || 0;
+      setDailyGoalSeconds(seconds);
+      setTempGoalHours(Math.floor(seconds / 3600));
+      setTempGoalMinutes(Math.floor((seconds % 3600) / 60));
+      setTempGoalSecs(seconds % 60);
     } catch (error: any) {
       if (error.response?.status === 404) setGoal(null);
     } finally {
@@ -259,7 +281,7 @@ export default function StudyCalendar() {
       );
       setStudySessions(data);
     } catch (error) {
-      console.error("Erro ao carregar sessões:", error);
+      showToast("Erro ao carregar sessões:", "error");
     }
   };
 
@@ -277,7 +299,7 @@ export default function StudyCalendar() {
         setElapsedSeconds(elapsed);
       }
     } catch {
-      console.log("Nenhuma sessão ativa encontrada");
+      showToast("Nenhuma sessão ativa encontrada", "error");
     }
   };
 
@@ -287,7 +309,7 @@ export default function StudyCalendar() {
       setIsTimerRunning(true);
       setStudyDay(data);
     } catch (error) {
-      console.error("Erro ao iniciar:", error);
+      showToast("Erro ao iniciar:", "error");
     }
   };
 
@@ -300,8 +322,11 @@ export default function StudyCalendar() {
       setElapsedSeconds(0);
       setDescription("");
       loadStudySessions();
+
+      showToast("Sessão finalizada com sucesso!", "success");
+
     } catch (error) {
-      console.error("Erro ao finalizar:", error);
+      showToast("Erro ao finalizar", "error");
     }
   };
 
@@ -312,7 +337,7 @@ export default function StudyCalendar() {
   const createDailyGoal = async (request: StudyGoalRequest) => {
     const { data } = await api.post<StudyGoalResponse>("/study-goal", request);
     setGoal(data);
-    setDailyGoalSeconds(data.dailyStudyMinutes * 60);
+    setDailyGoalSeconds(data.dailyStudySeconds);
     setShowSettings(false);
     return data;
   };
@@ -321,7 +346,7 @@ export default function StudyCalendar() {
     if (!goal) return;
     const { data } = await api.put<StudyGoalResponse>(`/study-goal/${goal.id}`, request);
     setGoal(data);
-    setDailyGoalSeconds(data.dailyStudyMinutes * 60);
+    setDailyGoalSeconds(data.dailyStudySeconds);
     setShowSettings(false);
     return data;
   };
@@ -385,13 +410,16 @@ export default function StudyCalendar() {
   };
 
   const handleSaveGoal = async () => {
-    if (tempGoal < 5 || tempGoal > 480) return alert("Mínimo 5 e máximo 480 minutos");
+    const totalSeconds = tempGoalHours * 3600 + tempGoalMinutes * 60 + tempGoalSecs;
+    if (totalSeconds < 300 || totalSeconds > 86400)
+      return showToast("Mínimo 5 minutos e máximo 24 horas", "info");
+
     try {
-      goal
-        ? await updateDailyGoal({ dailyStudyMinutes: tempGoal })
-        : await createDailyGoal({ dailyStudyMinutes: tempGoal });
+      const payload: StudyGoalRequest = { dailyStudySeconds: totalSeconds };
+      if (goal) await updateDailyGoal(payload);
+      else await createDailyGoal(payload);
     } catch (e) {
-      console.error(e);
+      showToast("Erro ao salvar", "error");
     }
   };
 
@@ -411,10 +439,14 @@ export default function StudyCalendar() {
     (acc, curr) => acc + (curr.studiedSeconds || 0),
     0
   );
-  const selectedDatePct = dailyGoalSeconds > 0
-    ? Math.min(100, Math.round((selectedDateTotalSeconds / dailyGoalSeconds) * 100))
-    : 0;
-  const selectedDateRemaining = Math.max(0, Math.floor((dailyGoalSeconds - selectedDateTotalSeconds) / 60));
+  const selectedDatePct =
+    dailyGoalSeconds > 0
+      ? Math.min(100, Math.round((selectedDateTotalSeconds / dailyGoalSeconds) * 100))
+      : 0;
+  const selectedDateRemaining = Math.max(
+    0,
+    Math.floor((dailyGoalSeconds - selectedDateTotalSeconds) / 60)
+  );
 
   return (
     <div className="flex h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -427,7 +459,6 @@ export default function StudyCalendar() {
       <div className="flex-1 overflow-y-auto">
         <Header onMenuClick={() => setSidebarOpen(true)} title="Calendário de Estudos" />
         <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-8">
-
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
             <div className="flex flex-col lg:flex-row items-center p-3 lg:p-4 gap-3 lg:gap-4">
               <div className="flex-1 w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -474,8 +505,7 @@ export default function StudyCalendar() {
                           type="time"
                           key={timerStartTimeValue}
                           defaultValue={timerStartTimeValue}
-                          className="text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5
- p-0 cursor-pointer"
+                          className="text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5 p-0 cursor-pointer"
                           onBlur={(e) => {
                             if (!e.target.value || !studyDay) return;
                             const newISO = rebuildISOWithLocalTime(
@@ -658,50 +688,75 @@ export default function StudyCalendar() {
         </div>
       </div>
 
-      {showSettings && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Settings className="w-6 h-6 text-blue-700" />
+      {showSettings && (() => {
+        const goalHours = Math.floor(dailyGoalSeconds / 3600);
+        const goalMinutes = Math.floor((dailyGoalSeconds % 3600) / 60);
+        const goalSecs = dailyGoalSeconds % 60;
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Settings className="w-6 h-6 text-blue-700" />
+                </div>
+                <h3 className="text-xl font-extrabold text-slate-900">Ajustar Meta</h3>
               </div>
-              <h3 className="text-xl font-extrabold text-slate-900">Ajustar Meta</h3>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">
-                  Minutos de estudo por dia
-                </label>
-                <input
-                  type="number"
-                  value={tempGoal}
-                  onChange={(e) => setTempGoal(Number(e.target.value))}
-                  className="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl mb-2 text-lg font-bold text-slate-900 focus:border-blue-500 focus:ring-0 transition-colors outline-none"
-                  placeholder="Ex: 60"
-                />
-                <p className="text-xs font-medium text-slate-500 ml-1">
-                  Sua meta atual é de{" "}
-                  <span className="text-blue-600 font-bold">{dailyGoalMinutes} minutos</span>.
-                </p>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors border border-slate-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveGoal}
-                  className="flex-1 py-3 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition-all active:scale-95"
-                >
-                  Confirmar
-                </button>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-3 ml-1">
+                    Tempo de estudo por dia
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: "Horas", max: 23, value: tempGoalHours, onChange: setTempGoalHours },
+                      { label: "Minutos", max: 59, value: tempGoalMinutes, onChange: setTempGoalMinutes },
+                      { label: "Segundos", max: 59, value: tempGoalSecs, onChange: setTempGoalSecs },
+                    ].map(({ label, max, value, onChange }) => (
+                      <div key={label} className="flex flex-col items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          {label}
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={max}
+                          value={value}
+                          onChange={(e) => onChange(Math.min(max, Math.max(0, Number(e.target.value))))}
+                          className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-2xl font-black text-slate-900 text-center focus:border-blue-500 focus:ring-0 transition-colors outline-none tabular-nums"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs font-medium text-slate-500 ml-1 mt-3">
+                    Meta atual:{" "}
+                    <span className="text-blue-600 font-bold">
+                      {goalHours > 0 && `${goalHours}h `}
+                      {goalMinutes > 0 && `${goalMinutes}min `}
+                      {goalSecs > 0 && `${goalSecs}s`}
+                      {dailyGoalSeconds === 0 && "não definida"}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors border border-slate-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveGoal}
+                    className="flex-1 py-3 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition-all active:scale-95"
+                  >
+                    Confirmar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {selectedDate && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -710,7 +765,6 @@ export default function StudyCalendar() {
             onClick={() => setSelectedDate(null)}
           />
           <div className="relative bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
-
             <div className="shrink-0 px-4 sm:px-5 pt-4 sm:pt-5 pb-4 border-b border-slate-100">
               <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-3 sm:hidden" />
               <div className="flex items-start justify-between gap-2">
@@ -753,8 +807,7 @@ export default function StudyCalendar() {
                     Meta diária
                   </span>
                   <span className="text-base sm:text-lg font-black text-slate-800 leading-none">
-                    {dailyGoalMinutes}{" "}
-                    <span className="text-xs font-semibold text-slate-400">min</span>
+                    {formatDuration(dailyGoalSeconds)}
                   </span>
                 </div>
                 <div className="flex-1 flex flex-col gap-0.5 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 shadow-sm">
@@ -762,8 +815,7 @@ export default function StudyCalendar() {
                     Estudado
                   </span>
                   <span className="text-base sm:text-lg font-black text-blue-700 leading-none">
-                    {safeMinutes(selectedDateTotalSeconds)}{" "}
-                    <span className="text-xs font-semibold text-blue-400">min</span>
+                    {formatDuration(selectedDateTotalSeconds)}
                   </span>
                 </div>
                 <div className="flex-1 flex flex-col gap-0.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5 shadow-sm">
@@ -771,8 +823,7 @@ export default function StudyCalendar() {
                     Restante
                   </span>
                   <span className="text-base sm:text-lg font-black text-emerald-700 leading-none">
-                    {selectedDateRemaining}{" "}
-                    <span className="text-xs font-semibold text-emerald-400">min</span>
+                    {formatDuration(Math.max(0, dailyGoalSeconds - selectedDateTotalSeconds))}
                   </span>
                 </div>
               </div>
@@ -793,7 +844,6 @@ export default function StudyCalendar() {
 
             <div className="flex-1 overflow-y-auto overscroll-contain">
               <div className="p-4 sm:p-5 space-y-5">
-
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">
                     Registrar sessão
@@ -876,11 +926,13 @@ export default function StudyCalendar() {
                                 }}
                               />
                               <button
-                                onClick={() => session.id && handleDeleteStudyDay(session.id)}
-                                className="shrink-0 p-1.5 text-red-400 hover:text-red-700 hover:bg-red-100 rounded-lg transition-all"
-                                title="Excluir sessão"
+                                onClick={() => {
+                                  setSessionToDelete(session.id);
+                                  setIsDeleteModalOpen(true);
+                                }}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
                               >
-                                <Trash className="w-4 h-4" />
+                                <Trash size={16} />
                               </button>
                             </div>
                             <div className="flex items-center gap-2 pl-4">
@@ -907,8 +959,7 @@ export default function StudyCalendar() {
                                   <input
                                     type="time"
                                     defaultValue={currentStart}
-                                    className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5
- p-0 cursor-pointer"
+                                    className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5 p-0 cursor-pointer"
                                     onBlur={(e) => {
                                       if (e.target.value && e.target.value !== currentStart)
                                         handleUpdateSession(
@@ -957,8 +1008,7 @@ export default function StudyCalendar() {
                                   <input
                                     type="time"
                                     defaultValue={currentEnd}
-                                    className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5
- p-0 cursor-pointer"
+                                    className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5 p-0 cursor-pointer"
                                     onBlur={(e) => {
                                       if (e.target.value && e.target.value !== currentEnd)
                                         handleUpdateSession(
@@ -972,7 +1022,7 @@ export default function StudyCalendar() {
                                 </div>
                               </div>
                               <span className="text-xs font-black text-slate-400 shrink-0 tabular-nums ml-auto">
-                                {safeMinutes(session.studiedSeconds)}m
+                                {formatDuration(session.studiedSeconds ?? 0)}
                               </span>
                             </div>
                           </div>
@@ -1002,9 +1052,7 @@ export default function StudyCalendar() {
                         <p className="text-sm font-semibold text-slate-400">
                           Nenhum registro para este dia
                         </p>
-                        <p className="text-xs text-slate-300 mt-0.5">
-                          Adicione uma sessão acima
-                        </p>
+                        <p className="text-xs text-slate-300 mt-0.5">Adicione uma sessão acima</p>
                       </div>
                     )}
                   </div>
@@ -1023,6 +1071,41 @@ export default function StudyCalendar() {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        title="Excluir Sessão"
+        message="Tem certeza que deseja apagar este registro de estudo? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => sessionToDelete && handleDeleteStudyDay(sessionToDelete)}
+      />
+
+      <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-3">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`
+              flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-white font-medium
+              animate-in slide-in-from-right-full duration-300
+              ${t.type === 'success' ? 'bg-emerald-600' : t.type === 'error' ? 'bg-red-600' : 'bg-blue-600'}
+            `}
+          >
+            {t.type === 'success' && <CheckCircle2 size={18} />}
+            {t.type === 'error' && <Trash size={18} />}
+            {t.type === 'info' && <Info size={18} />}
+
+            <span>{t.message}</span>
+
+            <button
+              onClick={() => setToasts(prev => prev.filter(item => item.id !== t.id))}
+              className="ml-2 hover:opacity-70 transition-opacity"
+            >
+              &times;
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1041,9 +1124,7 @@ function StatCard({
   return (
     <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100">
       <div className="flex items-center gap-2 sm:gap-3 mb-1">
-        <div
-          className={`w-7 h-7 sm:w-8 sm:h-8 ${bg} rounded-lg flex items-center justify-center`}
-        >
+        <div className={`w-7 h-7 sm:w-8 sm:h-8 ${bg} rounded-lg flex items-center justify-center`}>
           {icon}
         </div>
         <span className="text-[10px] sm:text-xs text-gray-500 font-medium">{label}</span>
