@@ -10,7 +10,7 @@ import {
   XCircle,
   Target,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import Select from "../ui/select";
 import Tooltip from "../ui/tooltip";
@@ -64,12 +64,6 @@ type Session = {
   completed: boolean;
 };
 
-type StudySessionResponse = {
-  id: string;
-  sessionName: string;
-  questions: QuestionDTO[];
-};
-
 export enum QuestionType {
   MULTIPLE_CHOICE = "MULTIPLE_CHOICE",
   TRUE_FALSE = "TRUE_FALSE",
@@ -81,7 +75,6 @@ type AIQuizChatProps = {
 
 export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [topic, setTopic] = useState("");
   const [quantity, setQuantity] = useState<string>("");
@@ -116,25 +109,13 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     }
   };
 
-  const updateURL = (sessionId: string | null) => {
-    if (sessionId) {
-      router.push(`/chat?session=${sessionId}`, { scroll: false });
-    } else {
-      router.push("/chat", { scroll: false });
-    }
-  };
-
-  useEffect(() => {
-    const sessionIdFromURL = searchParams.get("session");
-    if (sessionIdFromURL) {
-      loadSessionQuestions(sessionIdFromURL);
-      setActiveSessionId(sessionIdFromURL);
-    } else if (initialSessionId) {
-      loadSessionQuestions(initialSessionId);
-      setActiveSessionId(initialSessionId);
-      updateURL(initialSessionId);
-    }
-  }, [initialSessionId]);
+const goToSession = (sessionId: string | null) => {
+  if (sessionId) {
+    router.push(`/chat/${sessionId}`, { scroll: false });
+  } else {
+    router.push("/chat", { scroll: false });
+  }
+};
 
   useEffect(() => { loadSessions(); }, []);
   useEffect(() => { carregarEstados().then(setEstados); }, []);
@@ -167,7 +148,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       const newSessionId = response.data.id;
       setCurrentSession({ id: newSessionId, topic, questions, completed: false });
       setActiveSessionId(newSessionId);
-      updateURL(newSessionId);
+      goToSession(newSessionId);
       setTopic(""); setQuantity(""); setBanca(""); setSidebarOpen(false);
       await loadSessions();
     } catch (error: any) {
@@ -226,7 +207,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const handleDelete = async (sessionId: string) => {
     try {
       await api.delete(`/session/${sessionId}`);
-      if (sessionId === activeSessionId) { setCurrentSession(null); setActiveSessionId(null); updateURL(null); }
+      if (sessionId === activeSessionId) { setCurrentSession(null); setActiveSessionId(null); goToSession(null); }
       await loadSessions();
     } catch (err) {
       console.error("Erro ao deletar sessão", err);
@@ -235,12 +216,12 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
   const resetQuiz = () => {
     setCurrentSession(null); setActiveSessionId(null); setTopic("");
-    updateURL(null); setSidebarOpen(false); setShowResultsModal(false);
+    goToSession(null); setSidebarOpen(false); setShowResultsModal(false);
   };
 
   const handleSessionSelect = (sessionId: string) => {
     setActiveSessionId(sessionId); loadSessionQuestions(sessionId);
-    updateURL(sessionId); setShowResultsModal(false);
+    goToSession(sessionId); setShowResultsModal(false);
   };
 
   const totalQuestions = currentSession?.questions.length ?? 0;
@@ -302,7 +283,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                     <label className="text-sm font-medium" style={{ color: "var(--text)" }}>Banca</label>
                     <Tooltip content="Selecione a instituição organizadora do concurso." position="bottom" />
                   </div>
-                  <Select value={banca} onChange={setBanca} options={["Cespe/CEBRASPE","Consulpam","FGV","FCC","Vunesp","IBFC","FUNCAB","AOCP","Quadrix"]} placeholder="Selecione a banca" className="w-full" allowCustomValue />
+                  <Select value={banca} onChange={setBanca} options={["Cespe/CEBRASPE", "Consulpam", "FGV", "FCC", "Vunesp", "IBFC", "FUNCAB", "AOCP", "Quadrix"]} placeholder="Selecione a banca" className="w-full" allowCustomValue />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -316,7 +297,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                     <label className="text-sm font-medium" style={{ color: "var(--text)" }}>Quantidade</label>
                     <Tooltip content="Número de questões (5 a 50)." position="bottom" />
                   </div>
-                  <Select value={quantity} onChange={setQuantity} options={["5","10","15","20","25","30","35","40","45","50"]} placeholder="Quantidade" className="w-full" allowCustomValue />
+                  <Select value={quantity} onChange={setQuantity} options={["5", "10", "15", "20", "25", "30", "35", "40", "45", "50"]} placeholder="Quantidade" className="w-full" allowCustomValue />
                 </div>
               </div>
 
@@ -326,14 +307,14 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                     <label className="text-sm font-medium" style={{ color: "var(--text)" }}>Orgão (opcional)</label>
                     <Tooltip content="Selecione o órgão do concurso." position="bottom" />
                   </div>
-                  <Select value={orgao} onChange={setOrgao} options={["INSS","Receita Federal do Brasil (RFB)","Polícia Federal (PF)","Polícia Rodoviária Federal (PRF)","ABIN","BACEN","CGU","TCU","STF","STJ","TSE","TST","CNJ","MPU","DPU","AGU","Ministério da Fazenda","Ministério da Justiça","IBGE","ANVISA","ANATEL","ANEEL","ANP","Caixa Econômica Federal","Banco do Brasil","Correios","Universidades Federais","Institutos Federais"]} placeholder="Selecione o órgão" className="w-full" allowCustomValue />
+                  <Select value={orgao} onChange={setOrgao} options={["INSS", "Receita Federal do Brasil (RFB)", "Polícia Federal (PF)", "Polícia Rodoviária Federal (PRF)", "ABIN", "BACEN", "CGU", "TCU", "STF", "STJ", "TSE", "TST", "CNJ", "MPU", "DPU", "AGU", "Ministério da Fazenda", "Ministério da Justiça", "IBGE", "ANVISA", "ANATEL", "ANEEL", "ANP", "Caixa Econômica Federal", "Banco do Brasil", "Correios", "Universidades Federais", "Institutos Federais"]} placeholder="Selecione o órgão" className="w-full" allowCustomValue />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <label className="text-sm font-medium" style={{ color: "var(--text)" }}>Cargo (opcional)</label>
                     <Tooltip content="Selecione o cargo." position="bottom" />
                   </div>
-                  <Select value={cargo} onChange={setCargo} options={["Analista Administrativo","Técnico Administrativo","Assistente Administrativo","Agente Administrativo","Auxiliar Administrativo","Analista do Seguro Social","Técnico do Seguro Social","Auditor-Fiscal","Analista Tributário","Analista Judiciário","Técnico Judiciário","Oficial de Justiça","Analista de TI","Técnico de TI","Agente de Polícia Federal","Delegado de Polícia Federal","Perito Criminal Federal","Policial Rodoviário Federal","Professor","Escriturário","Analista Bancário"]} placeholder="Selecione o cargo" allowCustomValue />
+                  <Select value={cargo} onChange={setCargo} options={["Analista Administrativo", "Técnico Administrativo", "Assistente Administrativo", "Agente Administrativo", "Auxiliar Administrativo", "Analista do Seguro Social", "Técnico do Seguro Social", "Auditor-Fiscal", "Analista Tributário", "Analista Judiciário", "Técnico Judiciário", "Oficial de Justiça", "Analista de TI", "Técnico de TI", "Agente de Polícia Federal", "Delegado de Polícia Federal", "Perito Criminal Federal", "Policial Rodoviário Federal", "Professor", "Escriturário", "Analista Bancário"]} placeholder="Selecione o cargo" allowCustomValue />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -357,7 +338,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
                     <label className="text-sm font-medium" style={{ color: "var(--text)" }}>Nível (opcional)</label>
                     <Tooltip content="Nível do concurso." position="bottom" />
                   </div>
-                  <Select value={nivel} onChange={setNivel} options={["Médio","Superior"]} placeholder="Selecione o nível" />
+                  <Select value={nivel} onChange={setNivel} options={["Médio", "Superior"]} placeholder="Selecione o nível" />
                 </div>
               </div>
 

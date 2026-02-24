@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, FileText, RotateCcw } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import Tooltip from "../ui/tooltip";
 import ReactMarkdown from "react-markdown";
@@ -22,7 +22,12 @@ type Resume = {
   text: string;
 };
 
-export default function AIResumeChat() {
+type ResumeProps = {
+  initialResumeId?: string;
+};
+
+
+export default function AIResumeChat({ initialResumeId }: ResumeProps) {
   const router = useRouter();
 
   const [prompt, setPrompt] = useState("");
@@ -33,21 +38,18 @@ export default function AIResumeChat() {
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
   const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
 
-  const searchParams = useSearchParams();
-
   useEffect(() => {
-    const resumeIdFromURL = searchParams.get("id");
-    if (resumeIdFromURL) {
-      loadResume(resumeIdFromURL);
-      setActiveResumeId(resumeIdFromURL);
+    if (initialResumeId) {
+      loadResume(initialResumeId);
+      setActiveResumeId(initialResumeId);
     }
-  }, []);
+  }, [initialResumeId]);
 
   useEffect(() => { loadResumes(); }, []);
 
-  const updateURL = (resumeId: string | null) => {
+  const goToResume = (resumeId: string | null) => {
     if (resumeId) {
-      router.push(`/resume?id=${resumeId}`, { scroll: false });
+      router.push(`/resume/${resumeId}`, { scroll: false });
     } else {
       router.push("/resume", { scroll: false });
     }
@@ -64,7 +66,7 @@ export default function AIResumeChat() {
       const newResume = response.data;
       setResume(newResume);
       setActiveResumeId(newResume.id);
-      updateURL(newResume.id);
+      goToResume(newResume.id);
       setPrompt("");
       setSidebarOpen(false);
       await loadResumes();
@@ -100,14 +102,14 @@ export default function AIResumeChat() {
   const handleResumeSelect = (resumeId: string) => {
     setActiveResumeId(resumeId);
     loadResume(resumeId);
-    updateURL(resumeId);
+    goToResume(resumeId);
   };
 
   const resetResume = () => {
     setResume(null);
     setActiveResumeId(null);
     setPrompt("");
-    updateURL(null);
+    goToResume(null);
     setSidebarOpen(false);
   };
 
