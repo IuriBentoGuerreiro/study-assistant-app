@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Trash,
   Info,
+  Flag,
 } from "lucide-react";
 import Sidebar from "../ui/sidebar";
 import Header from "../ui/header";
@@ -81,6 +82,26 @@ function safeMinutes(seconds: number | null | undefined): number {
   return Math.floor(seconds / 60);
 }
 
+function calculateElapsedSeconds(
+  startTime: string,
+  totalPausedSeconds: number,
+  activePauseStart?: string
+) {
+  const now = Date.now();
+  const startMs = parseLocalDateTime(startTime).getTime();
+
+  let pausedSeconds = totalPausedSeconds ?? 0;
+
+  if (activePauseStart) {
+    const pauseStartMs = parseLocalDateTime(activePauseStart).getTime();
+    pausedSeconds += Math.floor((now - pauseStartMs) / 1000);
+  }
+
+  const elapsed = Math.floor((now - startMs) / 1000) - pausedSeconds;
+
+  return Math.max(0, elapsed);
+}
+
 export default function StudyCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -88,7 +109,6 @@ export default function StudyCalendar() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [dailyGoalSeconds, setDailyGoalSeconds] = useState(3600);
   const [showSettings, setShowSettings] = useState(false);
-  const [tempGoal, setTempGoal] = useState(60);
   const [goal, setGoal] = useState<StudyGoalResponse | null>(null);
   const [studyDay, setStudyDay] = useState<StudyDayResponse | null>(null);
   const [studySessions, setStudySessions] = useState<StudyDayResponse[]>([]);
@@ -97,31 +117,41 @@ export default function StudyCalendar() {
   const [sessionsOfSelectedDate, setSessionsOfSelectedDate] = useState<StudyDayResponse[]>([]);
   const [manualStart, setManualStart] = useState("08:00");
   const [manualEnd, setManualEnd] = useState("09:00");
-  const [description, setDescription] = useState("");
-  const [tempGoalHours, setTempGoalHours] = useState(Math.floor(dailyGoalSeconds / 3600));
-  const [tempGoalMinutes, setTempGoalMinutes] = useState(Math.floor((dailyGoalSeconds % 3600) / 60));
-  const [tempGoalSecs, setTempGoalSecs] = useState(dailyGoalSeconds % 60);
+
+  const [timerDescription, setTimerDescription] = useState("");
+  const [modalDescription, setModalDescription] = useState("");
+
+  const [tempGoalHours, setTempGoalHours] = useState(1);
+  const [tempGoalMinutes, setTempGoalMinutes] = useState(0);
+  const [tempGoalSecs, setTempGoalSecs] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
 
   const { toasts, showToast, setToasts } = useToast();
 
+  const [isPaused, setIsPaused] = useState(false);
+  const [activePauseId, setActivePauseId] = useState<number | null>(null);
+
+  const totalPausedSecondsRef = useRef(0);
+  const pauseStartTimeRef = useRef<number | null>(null);
+
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isTimerRunning && studyDay?.startTime) {
-      const tick = () => {
-        const start = parseLocalDateTime(studyDay.startTime).getTime();
-        const elapsed = Math.max(0, Math.floor((Date.now() - start) / 1000));
-        setElapsedSeconds(elapsed);
-        if (elapsed % 60 === 0 && elapsed > 0) saveProgress(elapsed);
-      };
-      tick();
-      interval = setInterval(tick, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
+    if (!isTimerRunning || !studyDay?.startTime) return;
+
+    const update = () => {
+      if (isPaused) return;
+      const value = calculateElapsedSeconds(
+        studyDay.startTime,
+        totalPausedSecondsRef.current
+      );
+      setElapsedSeconds(value);
     };
-  }, [isTimerRunning, studyDay?.startTime]);
+
+    update();
+    const interval = setInterval(update, 1000);
+
+    return () => clearInterval(interval);
+  }, [isTimerRunning, isPaused, studyDay?.startTime]);
 
   useEffect(() => {
     loadStudySessions();
@@ -136,11 +166,42 @@ export default function StudyCalendar() {
     init();
   }, []);
 
+  const startPause = async () => {
+    if (!studyDay) return;
+    try {
+      const { data } = await api.post(`/pauses/study-day/${studyDay.id}`);
+      setActivePauseId(data.id);
+      pauseStartTimeRef.current = Date.now();
+      setIsPaused(true);
+    } catch {
+      showToast("Erro ao iniciar pausa", "error");
+    }
+  };
+
+  const finishPause = async () => {
+    if (!activePauseId) return;
+    try {
+      await api.patch(`/pauses/${activePauseId}/finish`);
+
+      if (pauseStartTimeRef.current !== null) {
+        const pauseDuration = Math.floor((Date.now() - pauseStartTimeRef.current) / 1000);
+        totalPausedSecondsRef.current += pauseDuration;
+        pauseStartTimeRef.current = null;
+      }
+
+      setIsPaused(false);
+      setActivePauseId(null);
+    } catch {
+      showToast("Erro ao finalizar pausa", "error");
+    }
+  };
+
   const handleDayClick = (date: Date) => {
     const dateStr = formatDate(date);
     const sessions = studySessions.filter((s) => s.studyDate === dateStr);
     setSessionsOfSelectedDate(sessions);
     setSelectedDate(date);
+    setModalDescription("");
   };
 
   const handleUpdateCurrentSession = async (
@@ -156,9 +217,19 @@ export default function StudyCalendar() {
         studiedSeconds: updated.studiedSeconds ?? 0,
       });
       setStudyDay(updated);
-      if (fields.description !== undefined) setDescription(fields.description);
-    } catch (error) {
-      showToast("Erro ao atualizar sessão ativa:", "error");
+
+      if (fields.startTime) {
+        const recalculated = calculateElapsedSeconds(
+          fields.startTime,
+          totalPausedSecondsRef.current
+        );
+
+        setElapsedSeconds(recalculated);
+        showToast("Atualizado com sucesso", "success");
+
+      }
+    } catch {
+      showToast("Erro ao atualizar sessão ativa", "error");
     }
   };
 
@@ -174,13 +245,13 @@ export default function StudyCalendar() {
       const [h2, m2] = newEndTime.split(":").map(Number);
 
       if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) {
-        alert("Horários inválidos.");
+        showToast("Horários inválidos.", "error");
         return;
       }
 
       const totalSeconds = (h2 * 60 + m2 - (h1 * 60 + m1)) * 60;
       if (totalSeconds < 0) {
-        alert("O horário de fim deve ser posterior ao início.");
+        showToast("O horário de fim deve ser posterior ao início.", "error");
         return;
       }
 
@@ -193,13 +264,12 @@ export default function StudyCalendar() {
       });
 
       await loadStudySessions();
-      const dateQuery = formatDate(new Date(dateStr + "T12:00:00"));
       const { data } = await api.get<StudyDayResponse[]>(
-        `/study-day/calendar?start=${dateQuery}&end=${dateQuery}`
+        `/study-day/calendar?start=${dateStr}&end=${dateStr}`
       );
       setSessionsOfSelectedDate(data);
-    } catch (error) {
-      showToast("Erro ao atualizar sessão:", "error");
+    } catch {
+      showToast("Erro ao atualizar sessão", "error");
     }
   };
 
@@ -223,20 +293,19 @@ export default function StudyCalendar() {
       await api.post("/study-day/manual", {
         studyDate: dateStr,
         studiedSeconds: totalSeconds,
-        description: description || "Estudo sem título",
+        description: modalDescription || "Estudo sem título",
         startTime: `${dateStr}T${manualStart}:00`,
         endTime: `${dateStr}T${manualEnd}:00`,
-
       });
       await loadStudySessions();
       const { data } = await api.get<StudyDayResponse[]>(
         `/study-day/calendar?start=${dateStr}&end=${dateStr}`
       );
       setSessionsOfSelectedDate(data.filter((s) => s.studyDate === dateStr));
-      setDescription("");
+      setModalDescription("");
       showToast("Sessão registrada com sucesso!", "success");
-    } catch (error) {
-      showToast("Erro ao registrar manualmente:", "error");
+    } catch {
+      showToast("Erro ao registrar manualmente", "error");
     }
   };
 
@@ -245,11 +314,12 @@ export default function StudyCalendar() {
       await api.delete(`/study-day/${sessionId}`);
       setSessionsOfSelectedDate((prev) => prev.filter((s) => s.id !== sessionId));
       await loadStudySessions();
-
       showToast("Sessão excluída com sucesso.", "success");
-    } catch (error) {
-      console.error("Erro ao excluir sessão:", error);
+    } catch {
       showToast("Não foi possível excluir a sessão.", "error");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSessionToDelete(null);
     }
   };
 
@@ -280,26 +350,46 @@ export default function StudyCalendar() {
         `/study-day/calendar?start=${start}&end=${end}`
       );
       setStudySessions(data);
-    } catch (error) {
-      showToast("Erro ao carregar sessões:", "error");
+    } catch {
+      showToast("Erro ao carregar sessões", "error");
     }
   };
 
   const loadStudyDayActive = async () => {
     try {
-      const { data } = await api.get<StudyDayResponse>(`/study-day/user/active`);
+      const { data } = await api.get<StudyDayResponse>(
+        `/study-day/user/active`
+      );
+
       if (data && data.active) {
         setStudyDay(data);
-        setDescription(data.description ?? "");
+        setTimerDescription(data.description ?? "");
         setIsTimerRunning(true);
-        const elapsed = Math.max(
-          0,
-          Math.floor((Date.now() - parseLocalDateTime(data.startTime).getTime()) / 1000)
+
+        totalPausedSecondsRef.current = data.totalPausedSeconds ?? 0;
+
+        if (data.activePause) {
+          setIsPaused(true);
+          setActivePauseId(data.activePause.id);
+
+          pauseStartTimeRef.current =
+            parseLocalDateTime(data.activePause.startTime).getTime();
+        } else {
+          setIsPaused(false);
+          setActivePauseId(null);
+          pauseStartTimeRef.current = null;
+        }
+
+        const recalculated = calculateElapsedSeconds(
+          data.startTime,
+          data.totalPausedSeconds,
+          data.activePause?.startTime
         );
-        setElapsedSeconds(elapsed);
+
+        setElapsedSeconds(recalculated);
       }
-    } catch {
-      showToast("Nenhuma sessão ativa encontrada", "error");
+    } catch (error) {
+      console.error("Erro ao carregar sessão ativa", error);
     }
   };
 
@@ -308,8 +398,11 @@ export default function StudyCalendar() {
       const { data } = await api.post<StudyDayResponse>("/study-day", { description: desc });
       setIsTimerRunning(true);
       setStudyDay(data);
-    } catch (error) {
-      showToast("Erro ao iniciar:", "error");
+      totalPausedSecondsRef.current = 0;
+      pauseStartTimeRef.current = null;
+      setElapsedSeconds(0);
+    } catch {
+      showToast("Erro ao iniciar", "error");
     }
   };
 
@@ -320,18 +413,16 @@ export default function StudyCalendar() {
       setIsTimerRunning(false);
       setStudyDay(null);
       setElapsedSeconds(0);
-      setDescription("");
+      setTimerDescription("");
+      setIsPaused(false);
+      setActivePauseId(null);
+      totalPausedSecondsRef.current = 0;
+      pauseStartTimeRef.current = null;
       loadStudySessions();
-
       showToast("Sessão finalizada com sucesso!", "success");
-
-    } catch (error) {
+    } catch {
       showToast("Erro ao finalizar", "error");
     }
-  };
-
-  const saveProgress = async (seconds: number) => {
-    console.log("Saving progress:", seconds, "seconds");
   };
 
   const createDailyGoal = async (request: StudyGoalRequest) => {
@@ -383,29 +474,57 @@ export default function StudyCalendar() {
   };
 
   const calculateStats = (): StudyStats => {
-    const qualifiedDays = studySessions.filter((s) => s.studiedSeconds >= dailyGoalSeconds);
-    const totalSeconds = studySessions.reduce((sum, s) => sum + (s.studiedSeconds || 0), 0);
-    let currentStreak = 0;
-    const sorted = [...studySessions].sort(
-      (a, b) => new Date(b.studyDate).getTime() - new Date(a.studyDate).getTime()
-    );
-    const checkDate = new Date();
-    for (const session of sorted) {
-      if (
-        session.studyDate === formatDate(checkDate) &&
-        session.studiedSeconds >= dailyGoalSeconds
-      ) {
-        currentStreak++;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else if (new Date(session.studyDate) < checkDate) break;
+    const byDate = new Map<string, number>();
+    for (const s of studySessions) {
+      byDate.set(s.studyDate, (byDate.get(s.studyDate) ?? 0) + (s.studiedSeconds ?? 0));
     }
+
+    const qualifiedDates = [...byDate.entries()].filter(([, secs]) => secs >= dailyGoalSeconds);
+    const totalSeconds = [...byDate.values()].reduce((sum, s) => sum + s, 0);
+
+    let currentStreak = 0;
+    const check = new Date();
+    check.setHours(0, 0, 0, 0);
+    while (true) {
+      const dateStr = formatDate(check);
+      const secs = byDate.get(dateStr) ?? 0;
+      if (secs >= dailyGoalSeconds) {
+        currentStreak++;
+        check.setDate(check.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    const sortedDates = [...byDate.keys()].sort();
+    let longestStreak = 0;
+    let streak = 0;
+    let prevDate: Date | null = null;
+    for (const dateStr of sortedDates) {
+      const secs = byDate.get(dateStr) ?? 0;
+      const d = new Date(dateStr + "T12:00:00");
+      if (secs >= dailyGoalSeconds) {
+        if (prevDate) {
+          const diff = Math.round((d.getTime() - prevDate.getTime()) / 86400000);
+          streak = diff === 1 ? streak + 1 : 1;
+        } else {
+          streak = 1;
+        }
+        longestStreak = Math.max(longestStreak, streak);
+        prevDate = d;
+      } else {
+        prevDate = null;
+        streak = 0;
+      }
+    }
+
     return {
-      totalDays: qualifiedDays.length,
+      totalDays: qualifiedDates.length,
       currentStreak,
-      longestStreak: 0,
+      longestStreak,
       totalSeconds,
       averageSeconds:
-        qualifiedDays.length > 0 ? Math.round(totalSeconds / qualifiedDays.length) : 0,
+        qualifiedDates.length > 0 ? Math.round(totalSeconds / qualifiedDates.length) : 0,
     };
   };
 
@@ -418,7 +537,7 @@ export default function StudyCalendar() {
       const payload: StudyGoalRequest = { dailyStudySeconds: totalSeconds };
       if (goal) await updateDailyGoal(payload);
       else await createDailyGoal(payload);
-    } catch (e) {
+    } catch {
       showToast("Erro ao salvar", "error");
     }
   };
@@ -426,7 +545,6 @@ export default function StudyCalendar() {
   const stats = calculateStats();
   const progress = Math.min((elapsedSeconds / dailyGoalSeconds) * 100, 100);
   const days = getDaysInMonth();
-  const dailyGoalMinutes = Math.floor(dailyGoalSeconds / 60);
 
   if (loadingGoal)
     return (
@@ -443,10 +561,6 @@ export default function StudyCalendar() {
     dailyGoalSeconds > 0
       ? Math.min(100, Math.round((selectedDateTotalSeconds / dailyGoalSeconds) * 100))
       : 0;
-  const selectedDateRemaining = Math.max(
-    0,
-    Math.floor((dailyGoalSeconds - selectedDateTotalSeconds) / 60)
-  );
 
   return (
     <div className="flex h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -465,8 +579,8 @@ export default function StudyCalendar() {
                 <div className="flex-1 relative group">
                   <input
                     type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    value={timerDescription}
+                    onChange={(e) => setTimerDescription(e.target.value)}
                     onBlur={(e) => {
                       if (isTimerRunning && studyDay) {
                         handleUpdateCurrentSession({ description: e.target.value });
@@ -529,7 +643,7 @@ export default function StudyCalendar() {
                     {formatTime(elapsedSeconds)}
                   </span>
                   <span className="text-xs text-slate-400 font-medium mt-0.5">
-                    {isTimerRunning ? "Gravando" : "Pausado"}
+                    {!isTimerRunning ? "Parado" : isPaused ? "Pausado" : "Gravando"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -541,44 +655,39 @@ export default function StudyCalendar() {
                     <Award size={14} />
                     Meta
                   </button>
-                  {!isTimerRunning ? (
-                    <button
-                      onClick={() => createStudyDay(description)}
-                      className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center"
-                      title="START"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
+                  <div className="flex items-center gap-2">
+                    {isTimerRunning && (
+                      <button
+                        onClick={finishStudyDay}
+                        className="px-4 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-all flex items-center justify-center font-bold"
                       >
-                        <polygon points="5 3 19 12 5 21 5 3" />
-                      </svg>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={finishStudyDay}
-                      className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg shadow-red-200 transition-all active:scale-95 flex items-center justify-center"
-                      title="STOP"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        <Flag size={14} />
+                      </button>
+                    )}
+
+                    {!isTimerRunning ? (
+                      <button
+                        onClick={() => createStudyDay(timerDescription)}
+                        className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all flex items-center justify-center"
                       >
-                        <line x1="10" y1="4" x2="10" y2="20"></line>
-                        <line x1="14" y1="4" x2="14" y2="20"></line>
-                      </svg>
-                    </button>
-                  )}
+                        ▶
+                      </button>
+                    ) : isPaused ? (
+                      <button
+                        onClick={finishPause}
+                        className="w-12 h-12 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full shadow-lg transition-all flex items-center justify-center"
+                      >
+                        ⏵
+                      </button>
+                    ) : (
+                      <button
+                        onClick={startPause}
+                        className="w-12 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg transition-all flex items-center justify-center"
+                      >
+                        ❚❚
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -784,17 +893,7 @@ export default function StudyCalendar() {
                   onClick={() => setSelectedDate(null)}
                   className="shrink-0 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
@@ -803,28 +902,16 @@ export default function StudyCalendar() {
 
               <div className="flex gap-2 mt-3">
                 <div className="flex-1 flex flex-col gap-0.5 bg-white border border-slate-100 rounded-xl px-3 py-2.5 shadow-sm">
-                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
-                    Meta diária
-                  </span>
-                  <span className="text-base sm:text-lg font-black text-slate-800 leading-none">
-                    {formatDuration(dailyGoalSeconds)}
-                  </span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Meta diária</span>
+                  <span className="text-base sm:text-lg font-black text-slate-800 leading-none">{formatDuration(dailyGoalSeconds)}</span>
                 </div>
                 <div className="flex-1 flex flex-col gap-0.5 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 shadow-sm">
-                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-blue-400">
-                    Estudado
-                  </span>
-                  <span className="text-base sm:text-lg font-black text-blue-700 leading-none">
-                    {formatDuration(selectedDateTotalSeconds)}
-                  </span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-blue-400">Estudado</span>
+                  <span className="text-base sm:text-lg font-black text-blue-700 leading-none">{formatDuration(selectedDateTotalSeconds)}</span>
                 </div>
                 <div className="flex-1 flex flex-col gap-0.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5 shadow-sm">
-                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-500">
-                    Restante
-                  </span>
-                  <span className="text-base sm:text-lg font-black text-emerald-700 leading-none">
-                    {formatDuration(Math.max(0, dailyGoalSeconds - selectedDateTotalSeconds))}
-                  </span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-500">Restante</span>
+                  <span className="text-base sm:text-lg font-black text-emerald-700 leading-none">{formatDuration(Math.max(0, dailyGoalSeconds - selectedDateTotalSeconds))}</span>
                 </div>
               </div>
 
@@ -845,27 +932,21 @@ export default function StudyCalendar() {
             <div className="flex-1 overflow-y-auto overscroll-contain">
               <div className="p-4 sm:p-5 space-y-5">
                 <div>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">
-                    Registrar sessão
-                  </p>
+                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Registrar sessão</p>
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 block mb-1.5">
-                        O que você estudou?
-                      </label>
+                      <label className="text-[10px] font-bold text-slate-400 block mb-1.5">O que você estudou?</label>
                       <input
                         type="text"
                         placeholder="Ex: Revisão de Anatomia"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        value={modalDescription}
+                        onChange={(e) => setModalDescription(e.target.value)}
                         className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder:text-slate-300 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
                       />
                     </div>
                     <div className="flex gap-2">
                       <div className="flex-1 min-w-0">
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1.5">
-                          Início
-                        </label>
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1.5">Início</label>
                         <input
                           type="time"
                           value={manualStart}
@@ -874,9 +955,7 @@ export default function StudyCalendar() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1.5">
-                          Fim
-                        </label>
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1.5">Fim</label>
                         <input
                           type="time"
                           value={manualEnd}
@@ -895,9 +974,7 @@ export default function StudyCalendar() {
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">
-                    Sessões registradas
-                  </p>
+                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Sessões registradas</p>
                   <div className="space-y-2">
                     {sessionsOfSelectedDate.length > 0 ? (
                       sessionsOfSelectedDate.map((session) => {
@@ -917,12 +994,7 @@ export default function StudyCalendar() {
                                 className="flex-1 min-w-0 text-sm font-semibold text-slate-800 bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300"
                                 onBlur={(e) => {
                                   if (e.target.value !== session.description)
-                                    handleUpdateSession(
-                                      session,
-                                      e.target.value,
-                                      currentStart,
-                                      currentEnd
-                                    );
+                                    handleUpdateSession(session, e.target.value, currentStart, currentEnd);
                                 }}
                               />
                               <button
@@ -937,24 +1009,10 @@ export default function StudyCalendar() {
                             </div>
                             <div className="flex items-center gap-2 pl-4">
                               <div className="relative group/time">
-                                <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">
-                                  Início
-                                </label>
+                                <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">Início</label>
                                 <div className="flex items-center gap-1 bg-white border border-slate-200 group-hover/time:border-blue-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 rounded-lg px-1.5 sm:px-2 py-1.5 transition-all cursor-text">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="10"
-                                    height="10"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-slate-300 group-hover/time:text-blue-400 transition-colors shrink-0"
-                                  >
-                                    <circle cx="12" cy="12" r="10" />
-                                    <polyline points="12 6 12 12 16 14" />
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 group-hover/time:text-blue-400 transition-colors shrink-0">
+                                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                                   </svg>
                                   <input
                                     type="time"
@@ -962,48 +1020,19 @@ export default function StudyCalendar() {
                                     className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5 p-0 cursor-pointer"
                                     onBlur={(e) => {
                                       if (e.target.value && e.target.value !== currentStart)
-                                        handleUpdateSession(
-                                          session,
-                                          session.description,
-                                          e.target.value,
-                                          currentEnd
-                                        );
+                                        handleUpdateSession(session, session.description, e.target.value, currentEnd);
                                     }}
                                   />
                                 </div>
                               </div>
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="10"
-                                height="10"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                className="text-slate-300 shrink-0"
-                              >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-slate-300 shrink-0">
                                 <line x1="5" y1="12" x2="19" y2="12" />
                               </svg>
                               <div className="relative group/time">
-                                <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">
-                                  Fim
-                                </label>
+                                <label className="absolute -top-4 left-0 text-[9px] font-bold text-slate-400 uppercase tracking-wider opacity-0 group-hover/time:opacity-100 group-focus-within/time:opacity-100 transition-opacity whitespace-nowrap">Fim</label>
                                 <div className="flex items-center gap-1 bg-white border border-slate-200 group-hover/time:border-blue-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 rounded-lg px-1.5 sm:px-2 py-1.5 transition-all cursor-text">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="10"
-                                    height="10"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-slate-300 group-hover/time:text-blue-400 transition-colors shrink-0"
-                                  >
-                                    <circle cx="12" cy="12" r="10" />
-                                    <polyline points="12 6 12 12 16 14" />
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 group-hover/time:text-blue-400 transition-colors shrink-0">
+                                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                                   </svg>
                                   <input
                                     type="time"
@@ -1011,12 +1040,7 @@ export default function StudyCalendar() {
                                     className="text-[11px] sm:text-[12px] font-mono font-bold text-slate-600 bg-transparent border-none outline-none focus:text-blue-600 w-22.5 p-0 cursor-pointer"
                                     onBlur={(e) => {
                                       if (e.target.value && e.target.value !== currentEnd)
-                                        handleUpdateSession(
-                                          session,
-                                          session.description,
-                                          currentStart,
-                                          e.target.value
-                                        );
+                                        handleUpdateSession(session, session.description, currentStart, e.target.value);
                                     }}
                                   />
                                 </div>
@@ -1031,27 +1055,12 @@ export default function StudyCalendar() {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-10 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100">
                         <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-slate-400"
-                          >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                            <line x1="16" y1="2" x2="16" y2="6" />
-                            <line x1="8" y1="2" x2="8" y2="6" />
-                            <line x1="3" y1="10" x2="21" y2="10" />
+                            <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                           </svg>
                         </div>
-                        <p className="text-sm font-semibold text-slate-400">
-                          Nenhum registro para este dia
-                        </p>
+                        <p className="text-sm font-semibold text-slate-400">Nenhum registro para este dia</p>
                         <p className="text-xs text-slate-300 mt-0.5">Adicione uma sessão acima</p>
                       </div>
                     )}
@@ -1077,28 +1086,26 @@ export default function StudyCalendar() {
         title="Excluir Sessão"
         message="Tem certeza que deseja apagar este registro de estudo? Esta ação não pode ser desfeita."
         confirmLabel="Excluir"
-        onCancel={() => setIsDeleteModalOpen(false)}
-        onConfirm={() => sessionToDelete && handleDeleteStudyDay(sessionToDelete)}
+        onCancel={() => {
+          setIsDeleteModalOpen(false);
+          setSessionToDelete(null);
+        }}
+        onConfirm={() => sessionToDelete !== null && handleDeleteStudyDay(sessionToDelete)}
       />
 
       <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-3">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`
-              flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-white font-medium
-              animate-in slide-in-from-right-full duration-300
-              ${t.type === 'success' ? 'bg-emerald-600' : t.type === 'error' ? 'bg-red-600' : 'bg-blue-600'}
-            `}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-white font-medium animate-in slide-in-from-right-full duration-300
+              ${t.type === "success" ? "bg-emerald-600" : t.type === "error" ? "bg-red-600" : "bg-blue-600"}`}
           >
-            {t.type === 'success' && <CheckCircle2 size={18} />}
-            {t.type === 'error' && <Trash size={18} />}
-            {t.type === 'info' && <Info size={18} />}
-
+            {t.type === "success" && <CheckCircle2 size={18} />}
+            {t.type === "error" && <Trash size={18} />}
+            {t.type === "info" && <Info size={18} />}
             <span>{t.message}</span>
-
             <button
-              onClick={() => setToasts(prev => prev.filter(item => item.id !== t.id))}
+              onClick={() => setToasts((prev) => prev.filter((item) => item.id !== t.id))}
               className="ml-2 hover:opacity-70 transition-opacity"
             >
               &times;

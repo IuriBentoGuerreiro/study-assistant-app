@@ -17,4 +17,6 @@ export interface StudyDayResponse {
   startTime: string;
   endTime: string | null;
   active: boolean;
+  totalPausedSeconds: number;
+  activePause?: { id: number; startTime: string } | null;
 }
