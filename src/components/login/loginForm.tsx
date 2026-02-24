@@ -25,75 +25,69 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: "var(--bg)" }}>
       <div className="w-full max-w-md">
-        {/* Logo/Header */}
+
+        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4 shadow-lg">
             <Brain className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">BrainlyAI</h1>
-          <p className="text-gray-600">Entre para continuar seus estudos</p>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text)" }}>BrainlyAI</h1>
+          <p style={{ color: "var(--text-muted)" }}>Entre para continuar seus estudos</p>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        {/* Card */}
+        <div className="rounded-xl shadow-sm p-8" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
           <div className="space-y-5">
+
+            {/* E-mail */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                E-mail
-              </label>
+              <label className="block text-sm font-medium mb-2" style={{ color: "var(--text)" }}>E-mail</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-5 w-5" style={{ color: "var(--text-muted)" }} />
                 </div>
                 <input
                   type="email"
                   value={username}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
                   placeholder="seu@email.com"
+                  className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+                  style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)", color: "var(--text)" }}
                 />
               </div>
             </div>
 
+            {/* Senha */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Senha
-              </label>
+              <label className="block text-sm font-medium mb-2" style={{ color: "var(--text)" }}>Senha</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5" style={{ color: "var(--text-muted)" }} />
                 </div>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
                   placeholder="••••••••"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSubmit(e);
-                    }
-                  }}
+                  className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+                  style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)", color: "var(--text)" }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(e); }}
                 />
               </div>
             </div>
 
             <div className="text-right">
-              <a
-                href="/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
+              <a href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                 Esqueci minha senha
               </a>
             </div>
 
-
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#b91c1c" }}>
                 {error}
               </div>
             )}
@@ -111,11 +105,9 @@ export default function LoginForm() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-sm text-gray-600 mt-6">
+        <p className="text-center text-sm mt-6" style={{ color: "var(--text-muted)" }}>
           Não tem uma conta?{" "}
-          <a href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-            Cadastre-se
-          </a>
+          <a href="/register" className="text-blue-600 hover:text-blue-700 font-medium">Cadastre-se</a>
         </p>
       </div>
     </div>
