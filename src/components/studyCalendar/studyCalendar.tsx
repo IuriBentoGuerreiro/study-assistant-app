@@ -446,8 +446,12 @@ export default function StudyCalendar() {
                     onClick={() => date && handleDayClick(date)}
                     className="cursor-pointer aspect-square rounded-lg sm:rounded-xl flex flex-col items-center justify-center relative transition-all"
                     style={{
-                      border: `2px solid ${today ? "#3b82f6" : isFinished ? "#6ee7b7" : "var(--border)"}`,
-                      background: today ? "#eff6ff" : isFinished ? "#ecfdf5" : "var(--bg-card)",
+                      border: `2px solid ${today
+                          ? "var(--text-active)"
+                          : isFinished
+                            ? "var(--correct)"
+                            : "var(--border)"
+                        }`,
                     }}
                   >
                     <span className="text-xs sm:text-sm font-semibold" style={{ color: today ? "#2563eb" : "var(--text)" }}>
@@ -656,7 +660,7 @@ export default function StudyCalendar() {
 
             {/* Modal footer */}
             <div className="shrink-0 px-4 sm:px-5 py-4" style={{ borderTop: "1px solid var(--border)", background: "var(--bg-card)" }}>
-              <button onClick={() => setSelectedDate(null)} className="w-full py-3 text-white text-sm font-black rounded-xl transition-all tracking-wide" style={{ background: "var(--text)" }}>
+              <button onClick={() => setSelectedDate(null)} className="w-full py-3 text-white text-sm font-black rounded-xl transition-all tracking-wide" style={{ background: "var(--sidebar-bg)" }}>
                 Fechar
               </button>
             </div>

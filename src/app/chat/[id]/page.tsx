@@ -1,9 +1,11 @@
 import AIQuizChat from "@/src/components/AIQuizChat/chat";
 
-export default function Page({
+export default async function Page({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  return <AIQuizChat initialSessionId={params.id} />;
+  const { id } = await params;
+
+  return <AIQuizChat initialSessionId={id} />;
 }
