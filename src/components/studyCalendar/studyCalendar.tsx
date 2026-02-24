@@ -546,11 +546,6 @@ export default function StudyCalendar() {
   const progress = Math.min((elapsedSeconds / dailyGoalSeconds) * 100, 100);
   const days = getDaysInMonth();
 
-  if (loadingGoal)
-    return (
-      <div className="h-screen flex items-center justify-center">Carregando...</div>
-    );
-
   const timerStartTimeValue = studyDay?.startTime ? toLocalTimeString(studyDay.startTime) : "";
 
   const selectedDateTotalSeconds = sessionsOfSelectedDate.reduce(
