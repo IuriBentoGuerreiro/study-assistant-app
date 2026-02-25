@@ -23,6 +23,7 @@ import { QuestionType } from "@/src/types/Question";
 import { ResultsModal } from "../ui/ResultsModal";
 import { LabeledField } from "../ui/LabeledField";
 import { ScoreLine } from "../ui/ScoreLine";
+import { ContentLoader } from "../ui/ContentLoad";
 
 
 type ApiQuestion = {
@@ -160,6 +161,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
 
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+
   const { toasts, showToast, setToasts } = useToast();
 
 
@@ -168,12 +171,12 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const correctAnswers = currentSession?.questions.filter(q => q.userAnswerIndex === q.correctAnswerIndex).length ?? 0;
   const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
-  const question = currentSession?.questions[0];
+  const sessionName = useMemo(() => {
+    if (currentSession?.sessionName) return currentSession.sessionName;
+    if (currentSession?.topic) return currentSession.topic;
 
-  const sessionName = useMemo(
-    () => sessions.find(s => s.id === activeSessionId)?.sessionName ?? "Sessão",
-    [sessions, activeSessionId],
-  );
+    return sessions.find(s => s.id === activeSessionId)?.sessionName ?? "Sessão";
+  }, [sessions, activeSessionId, currentSession]);
 
   useEffect(() => { loadSessions(); }, []);
 
@@ -208,6 +211,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
   const loadFullSession = async (sessionId: number) => {
     try {
+      setIsLoadingSession(true);
       const { data } = await api.get<ApiFullSession>(`/session/${sessionId}/full`);
 
       const questions: Question[] = data.questions.map(q => ({
@@ -230,6 +234,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       setSidebarOpen(false);
     } catch (err) {
       showToast("Erro ao carregar sessão completa:", "error");
+    } finally {
+      setIsLoadingSession(false);
     }
   };
 
@@ -353,7 +359,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
   return (
     <div className="flex h-screen" style={{ background: "var(--bg)" }}>
-
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -372,162 +377,154 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
         <Header onMenuClick={() => setSidebarOpen(true)} title="Gerar Questões" />
 
         <div className="p-4 sm:p-6">
+          {isLoadingSession ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <ContentLoader message="Buscando sua sessão..." />
+            </div>
+          ) : (
+            <>
+              {!currentSession && (
+                <div className="max-w-3xl mx-auto mb-6 flex flex-col gap-4" style={{ color: "var(--text)" }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <LabeledField label="Banca" tooltip="Selecione a banca">
+                      <Select value={banca} onChange={setBanca} options={BANCA_OPTIONS} placeholder="Selecione a banca" allowCustomValue />
+                    </LabeledField>
+                    <LabeledField label="Tipo de Questões" tooltip="Selecione o formato">
+                      <Select value={questionType ?? ""} onChange={v => setQuestionType(v as QuestionType)} options={QUESTION_TYPE_OPTIONS} placeholder="Selecione o tipo" />
+                    </LabeledField>
+                    <LabeledField label="Quantidade" tooltip="5 a 50">
+                      <Select value={quantity} onChange={setQuantity} options={QUANTITY_OPTIONS} placeholder="Quantidade" allowCustomValue />
+                    </LabeledField>
+                  </div>
 
-          {!currentSession && (
-            <div className="max-w-3xl mx-auto mb-6 flex flex-col gap-4" style={{ color: "var(--text)" }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <LabeledField
+                      label="Órgão (opcional)"
+                      tooltip="Selecione ou digite o órgão público do concurso (ex: INSS, RFB)."
+                    >
+                      <Select value={orgao} onChange={setOrgao} options={ORGAO_OPTIONS} placeholder="Selecione o órgão" allowCustomValue />
+                    </LabeledField>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <LabeledField label="Banca" tooltip="Selecione a instituição organizadora do concurso.">
-                  <Select value={banca} onChange={setBanca} options={BANCA_OPTIONS} placeholder="Selecione a banca" className="w-full" allowCustomValue />
-                </LabeledField>
+                    <LabeledField
+                      label="Cargo (opcional)"
+                      tooltip="Especifique o cargo pretendido para direcionar as questões."
+                    >
+                      <Select value={cargo} onChange={setCargo} options={CARGO_OPTIONS} placeholder="Selecione o cargo" allowCustomValue />
+                    </LabeledField>
 
-                <LabeledField label="Tipo de Questões" tooltip="Selecione o formato das questões.">
-                  <Select value={questionType ?? ""} onChange={v => setQuestionType(v as QuestionType)} options={QUESTION_TYPE_OPTIONS} placeholder="Selecione o tipo" />
-                </LabeledField>
+                    <LabeledField
+                      label="Estado (opcional)"
+                      tooltip="Filtre questões aplicadas em exames de um estado específico."
+                    >
+                      <Select value={estado} onChange={setEstado} options={estados} placeholder="Estado" allowCustomValue />
+                    </LabeledField>
+                  </div>
 
-                <LabeledField label="Quantidade" tooltip="Número de questões (5 a 50).">
-                  <Select value={quantity} onChange={setQuantity} options={QUANTITY_OPTIONS} placeholder="Quantidade" className="w-full" allowCustomValue />
-                </LabeledField>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <LabeledField
+                      label="Cidade (opcional)"
+                      tooltip="Filtre questões de concursos municipais específicos."
+                    >
+                      <Select value={cidade} onChange={setCidade} options={cidades} placeholder="Cidade" allowCustomValue />
+                    </LabeledField>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <LabeledField label="Órgão (opcional)" tooltip="Selecione o órgão do concurso.">
-                  <Select value={orgao} onChange={setOrgao} options={ORGAO_OPTIONS} placeholder="Selecione o órgão" className="w-full" allowCustomValue />
-                </LabeledField>
+                    <LabeledField
+                      label="Nível (opcional)"
+                      tooltip="Escolha entre nível Médio ou Superior."
+                    >
+                      <Select value={nivel} onChange={setNivel} options={NIVEL_OPTIONS} placeholder="Selecione o nível" />
+                    </LabeledField>
+                  </div>
 
-                <LabeledField label="Cargo (opcional)" tooltip="Selecione o cargo.">
-                  <Select value={cargo} onChange={setCargo} options={CARGO_OPTIONS} placeholder="Selecione o cargo" allowCustomValue />
-                </LabeledField>
+                  <LabeledField label="Tema" tooltip="Assunto ou conteúdo de PDF">
+                    <textarea
+                      value={topic}
+                      onChange={e => setTopic(e.target.value)}
+                      placeholder="Digite um tema para gerar questões..."
+                      className="rounded-lg px-4 py-3 w-full min-h-30 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)" }}
+                    />
+                  </LabeledField>
 
-                <LabeledField label="Estado (opcional)" tooltip="Filtre por estado.">
-                  <Select value={estado} onChange={setEstado} options={estados} placeholder="Estado" className="w-full" allowCustomValue />
-                </LabeledField>
-              </div>
+                  {errorMessage && (
+                    <div className="px-4 py-3 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700">
+                      {errorMessage}
+                    </div>
+                  )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <LabeledField label="Cidade (opcional)" tooltip="Filtre por cidade.">
-                  <Select value={cidade} onChange={setCidade} options={cidades} placeholder="Cidade" className="w-full" allowCustomValue />
-                </LabeledField>
+                  <button
+                    onClick={generateQuestions}
+                    disabled={isGenerating}
+                    className="bg-blue-600 text-white px-8 py-3 rounded-lg w-full sm:w-auto sm:self-end flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+                  >
+                    {isGenerating ? <><Loader2 className="animate-spin w-5 h-5" /> Gerando...</> : <><Brain className="w-5 h-5" /> Gerar Questões</>}
+                  </button>
 
-                <LabeledField label="Nível (opcional)" tooltip="Nível do concurso.">
-                  <Select value={nivel} onChange={setNivel} options={NIVEL_OPTIONS} placeholder="Selecione o nível" />
-                </LabeledField>
-              </div>
-
-              <LabeledField label="Tema" tooltip="Digite o assunto ou cole o conteúdo de um PDF.">
-                <textarea
-                  value={topic}
-                  onChange={e => setTopic(e.target.value)}
-                  placeholder="Digite um tema para gerar questões... Você pode colar um texto extenso ou conteúdo de um PDF aqui."
-                  className="rounded-lg px-4 py-3 w-full min-h-30 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)" }}
-                />
-              </LabeledField>
-
-              {errorMessage && (
-                <div className="px-4 py-3 rounded-lg text-sm" style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#b91c1c" }}>
-                  {errorMessage}
+                  <div className="mt-10 text-center px-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                      <Brain className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <p className="text-xl font-semibold">Bem-vindo ao BrainlyAI!</p>
+                    <p className="mt-2 text-muted-foreground">Personalize seus estudos gerando questões com IA.</p>
+                  </div>
                 </div>
               )}
 
-              <button
-                onClick={generateQuestions}
-                disabled={isGenerating}
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg w-full sm:w-auto sm:self-end flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {isGenerating
-                  ? <><Loader2 className="animate-spin w-5 h-5" /><span>Gerando...</span></>
-                  : <><Brain className="w-5 h-5" /><span>Gerar Questões</span></>
-                }
-              </button>
-
-              <div className="mt-6 sm:mt-10 text-center px-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                  <Brain className="w-8 h-8 text-blue-600" />
-                </div>
-                <p className="text-xl sm:text-2xl font-semibold" style={{ color: "var(--text)" }}>
-                  Bem-vindo ao BrainlyAI!
-                </p>
-                <p className="mt-2 text-base sm:text-lg max-w-2xl mx-auto" style={{ color: "var(--text-muted)" }}>
-                  Digite um tema, escolha a quantidade de questões e a banca para gerar suas questões personalizadas.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {currentSession && (
-            <div className="max-w-3xl mx-auto mb-6">
-              <div className="bg-linear-to-r from-blue-600 to-blue-700 text-white p-6 rounded-xl shadow-lg">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Target className="w-5 h-5" />
-                      <p className="text-lg font-semibold">{sessionName}</p>
-                    </div>
-                    <p className="text-blue-100 text-sm mb-3">
-                      Aqui estão <strong>{totalQuestions}</strong> questões geradas
-                      {currentSession.topic && ` sobre: ${currentSession.topic}`}
-                    </p>
-                    <p className="text-white font-medium">Boa sorte! 🍀 Leia com atenção e faça o seu melhor!</p>
-                  </div>
-                  <div className="ml-4 text-right">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
-                      <p className="text-xs text-blue-100">Progresso</p>
-                      <p className="text-2xl font-bold">{answeredQuestions}/{totalQuestions}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 bg-white/20 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-white h-full transition-all duration-500 ease-out"
-                    style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentSession && (
-            <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
-              {currentSession.questions.map((q, idx) => (
-                <QuestionCard
-                  key={q.id}
-                  question={q}
-                  index={idx}
-                  onAnswer={handleAnswer}
-                />
-              ))}
-            </div>
-          )}
-
-          {currentSession && answeredQuestions > 0 && (
-            <div
-              className="max-w-3xl mx-auto mt-6 sm:mt-8 rounded-xl p-4 sm:p-5 shadow-sm"
-              style={{ background: "var(--bg-card)", border: "2px solid var(--border)" }}
-            >
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="space-y-2">
-                  <ScoreLine color="bg-blue-500" label="Respondidas" value={`${answeredQuestions} / ${totalQuestions}`} />
-                  <ScoreLine color="bg-green-500" label="Acertos" value={String(correctAnswers)} />
-                  <ScoreLine color="bg-red-500" label="Erros" value={String(answeredQuestions - correctAnswers)} />
-                </div>
-                {answeredQuestions === totalQuestions && (
-                  <div className="text-center sm:text-right">
-                    <div className="inline-flex items-center gap-2 bg-blue-50  px-4 py-2 rounded-lg">
-                      <Trophy className="w-5 h-5 text-blue-600" />
-                      <div>
-                        <p className="text-xs text-blue-600 font-medium">Resultado Final</p>
-                        <p className="text-2xl font-bold text-blue-700">{percentage}%</p>
+              {currentSession && (
+                <div className="max-w-3xl mx-auto space-y-6">
+                  <div className="bg-linear-to-r from-blue-600 to-blue-700 text-white p-6 rounded-xl shadow-lg">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="w-5 h-5" />
+                          <p className="text-lg font-semibold">{sessionName}</p>
+                        </div>
+                        <p className="text-blue-100 text-sm mb-3">
+                          Total de <strong>{totalQuestions}</strong> questões sobre {sessionName}. Boa sorte! 🍀
+                        </p>
+                      </div>
+                      <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-right">
+                        <p className="text-xs text-blue-100">Progresso</p>
+                        <p className="text-2xl font-bold">{answeredQuestions}/{totalQuestions}</p>
                       </div>
                     </div>
+                    <div className="mt-4 bg-white/20 rounded-full h-2 overflow-hidden">
+                      <div className="bg-white h-full transition-all duration-500" style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }} />
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
+
+                  <div className="space-y-4">
+                    {currentSession.questions.map((q, idx) => (
+                      <QuestionCard key={q.id} question={q} index={idx} onAnswer={handleAnswer} />
+                    ))}
+                  </div>
+
+                  {answeredQuestions > 0 && (
+                    <div className="rounded-xl p-5 border-2 border-dashed border-gray-200 bg-card shadow-sm">
+                      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="space-y-2 w-full sm:w-auto">
+                          <ScoreLine color="bg-blue-500" label="Respondidas" value={`${answeredQuestions} / ${totalQuestions}`} />
+                          <ScoreLine color="bg-green-500" label="Acertos" value={String(correctAnswers)} />
+                          <ScoreLine color="bg-red-500" label="Erros" value={String(answeredQuestions - correctAnswers)} />
+                        </div>
+                        {answeredQuestions === totalQuestions && (
+                          <div className="flex items-center gap-3 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                            <Trophy className="w-8 h-8 text-yellow-500" />
+                            <div>
+                              <p className="text-xs text-blue-600 font-bold uppercase">Resultado</p>
+                              <p className="text-3xl font-black text-blue-700">{percentage}%</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
-
       <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-3">
         {toasts.map((t) => (
           <div key={t.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-white font-medium animate-in slide-in-from-right-full duration-300 ${t.type === "success" ? "bg-emerald-600" : t.type === "error" ? "bg-red-600" : "bg-blue-600"}`}>
