@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Brain, MessageSquare, FileText, Sparkles, Target, BookOpen, Zap, CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/src/components/ui/sidebar";
-import Header from "@/src/components/ui/header";
+import Sidebar from "@/src/components/ui/Sidebar";
+import Header from "@/src/components/ui/Header";
 
 export default function AboutPage() {
   const router = useRouter();

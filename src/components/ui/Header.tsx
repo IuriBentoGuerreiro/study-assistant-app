@@ -1,6 +1,6 @@
 "use client";
 import { Menu } from "lucide-react";
-import { ModeToggle } from "./modeToggle";
+import { ModeToggle } from "./ModeToggle";
 
 type HeaderProps = {
   onMenuClick: () => void;

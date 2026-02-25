@@ -14,9 +14,11 @@ import {
   Info,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import ConfirmationModal from "./ConfirmationModal";
+import { useState } from "react";
 
 type ListItem = {
-  id: string;
+  id: number;
   title?: string;
   sessionName?: string;
   createdAt: string;
@@ -27,13 +29,13 @@ type SidebarProps = {
   setSidebarOpen: (open: boolean) => void;
   subtitle?: string;
   listItems?: ListItem[];
-  activeItemId?: string | null;
-  onItemSelect?: (id: string) => void;
+  activeItemId?: number | null;
+  onItemSelect?: (id: number) => void;
   onNewItem?: () => void;
   newItemLabel?: string;
   newItemIcon?: LucideIcon;
   showListSection?: boolean;
-  onItemDelete?: (id: string) => void;
+  onItemDelete?: (id: number) => void;
 };
 
 export default function Sidebar({
@@ -49,6 +51,9 @@ export default function Sidebar({
   showListSection = false,
   onItemDelete,
 }: SidebarProps) {
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+
   const router = useRouter();
   const pathname = usePathname();
 
@@ -62,7 +67,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* SIDEBAR */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-64 shadow-lg transform transition-transform lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
@@ -72,7 +76,6 @@ export default function Sidebar({
         }}
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
           <div
             className="h-16 px-4 flex items-center justify-between"
             style={{ borderBottom: "1px solid var(--border)" }}
@@ -103,7 +106,6 @@ export default function Sidebar({
             </button>
           </div>
 
-          {/* Navigation */}
           <nav
             className="p-4 space-y-2"
             style={{ borderBottom: "1px solid var(--border)" }}
@@ -142,7 +144,6 @@ export default function Sidebar({
             })}
           </nav>
 
-          {/* List Section */}
           {showListSection && (
             <div className="p-4 flex-1 overflow-y-auto space-y-2">
               {onNewItem && (
@@ -172,8 +173,8 @@ export default function Sidebar({
                   className="group relative w-full rounded-lg transition-colors hover:bg-(--bg-hover)"
                   style={{
                     border: `1px solid ${activeItemId === item.id
-                        ? "var(--border-active)"
-                        : "var(--border)"
+                      ? "var(--border-active)"
+                      : "var(--border)"
                       }`,
                     background:
                       activeItemId === item.id
@@ -203,12 +204,11 @@ export default function Sidebar({
                     </p>
                   </button>
 
-                  {onItemDelete && (
+                  {(
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onItemDelete(item.id);
+                      onClick={() => {
+                        setItemToDelete(item.id); setIsDeleteModalOpen(true);
                       }}
                       className="
       absolute right-2 top-1/2 -translate-y-1/2
@@ -229,7 +229,6 @@ export default function Sidebar({
 
           {!showListSection && <div className="flex-1" />}
 
-          {/* Logout */}
           <div
             className="p-4 mt-auto"
             style={{ borderTop: "1px solid var(--border)" }}
@@ -253,7 +252,6 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Overlay mobile */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden"
@@ -261,6 +259,18 @@ export default function Sidebar({
           onClick={() => setSidebarOpen(false)}
         />
       )}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        title="Excluir Sessão"
+        message="Tem certeza que deseja apagar este registro de estudo? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        onCancel={() => { setIsDeleteModalOpen(false); setItemToDelete(null); }}
+        onConfirm={() => {
+          if (itemToDelete !== null && onItemDelete) {
+            onItemDelete(itemToDelete);
+            setIsDeleteModalOpen(false);
+          }
+        }} />
     </>
   );
 }

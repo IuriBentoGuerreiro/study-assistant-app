@@ -4,26 +4,26 @@ import { useState, useEffect } from "react";
 import { Loader2, FileText, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
-import Tooltip from "../ui/tooltip";
+import Tooltip from "../ui/Tooltip";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
-import Sidebar from "../ui/sidebar";
-import Header from "../ui/header";
+import Sidebar from "../ui/Sidebar";
+import Header from "../ui/Header";
 
 type ResumeListItem = {
-  id: string;
+  id: number;
   title: string;
   createdAt: string;
 };
 
 type Resume = {
-  id: string;
+  id: number;
   text: string;
 };
 
 type ResumeProps = {
-  initialResumeId?: string;
+  initialResumeId?: number;
 };
 
 
@@ -36,7 +36,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
-  const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
+  const [activeResumeId, setActiveResumeId] = useState<number | null>(null);
 
   useEffect(() => {
     if (initialResumeId) {
@@ -47,7 +47,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
 
   useEffect(() => { loadResumes(); }, []);
 
-  const goToResume = (resumeId: string | null) => {
+  const goToResume = (resumeId: number | null) => {
     if (resumeId) {
       router.push(`/resume/${resumeId}`, { scroll: false });
     } else {
@@ -88,7 +88,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
     }
   };
 
-  const loadResume = async (resumeId: string) => {
+  const loadResume = async (resumeId: number) => {
     try {
       const { data } = await api.get<Resume>(`/resume/${resumeId}`);
       setResume(data);
@@ -99,7 +99,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
     }
   };
 
-  const handleResumeSelect = (resumeId: string) => {
+  const handleResumeSelect = (resumeId: number) => {
     setActiveResumeId(resumeId);
     loadResume(resumeId);
     goToResume(resumeId);
@@ -136,7 +136,6 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-6xl mx-auto space-y-6">
 
-            {/* INPUT */}
             {!resume && (
               <div className="flex flex-col gap-4">
                 <div>
@@ -179,7 +178,6 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
               </div>
             )}
 
-            {/* CABEÇALHO DO RESULTADO */}
             {resume && (
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
@@ -195,7 +193,6 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
               </div>
             )}
 
-            {/* MARKDOWN */}
             {resume && (
               <ReactMarkdown
                 rehypePlugins={[rehypeRaw, rehypeSanitize]}

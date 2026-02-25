@@ -8,8 +8,8 @@ import {
   FileText,
   ClipboardCheck
 } from "lucide-react";
-import Sidebar from "../ui/sidebar";
-import Header from "../ui/header";
+import Sidebar from "../ui/Sidebar";
+import Header from "../ui/Header";
 
 type SessionListItem = {
   id: string;
@@ -58,7 +58,6 @@ export default function DashboardView() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-zinc-950">
 
-      {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -66,19 +65,15 @@ export default function DashboardView() {
         showListSection={true}
       />
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* HEADER */}
         <Header
           onMenuClick={() => setSidebarOpen(true)}
           title="Dashboard"
         />
 
-        {/* Content */}
         <main className="flex-1 overflow-y-auto p-6">
 
-          {/* MÉTRICAS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-800">
               <h3 className="text-sm font-medium text-gray-600 dark:text-zinc-400 mb-2">
@@ -108,11 +103,9 @@ export default function DashboardView() {
             </div>
           </div>
 
-          {/* LISTAGEM DE RESUMOS E SIMULADOS */}
           <div className="w-full bg-gray-100 dark:bg-zinc-900 p-4 rounded-lg">
             <div className="max-w-6xl mx-auto space-y-6">
 
-              {/* SESSÕES */}
               <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700">
                 <div className="p-6 border-b border-gray-200 dark:border-zinc-700">
                   <h3 className="text-xl font-bold text-gray-800 dark:text-white">
@@ -153,7 +146,6 @@ export default function DashboardView() {
                 </div>
               </div>
 
-              {/* RESUMOS */}
               <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700">
                 <div className="p-6 border-b border-gray-200 dark:border-zinc-700">
                   <h3 className="text-xl font-bold text-gray-800 dark:text-white">

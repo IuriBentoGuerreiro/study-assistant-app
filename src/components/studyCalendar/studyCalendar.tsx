@@ -5,13 +5,13 @@ import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock,
   TrendingUp, Flame, Award, Settings, CheckCircle2, Trash, Info, Flag,
 } from "lucide-react";
-import Sidebar from "../ui/sidebar";
-import Header from "../ui/header";
+import Sidebar from "../ui/Sidebar";
+import Header from "../ui/Header";
 import { api } from "@/src/lib/api";
 import { StudyGoalRequest, StudyGoalResponse } from "@/src/types/StudyGoal";
 import { StudyDayResponse } from "@/src/types/StudyDay";
 import { useToast } from "@/hooks/useToast";
-import ConfirmationModal from "../ui/confirmationModal";
+import ConfirmationModal from "../ui/ConfirmationModal";
 
 type StudyStats = {
   totalDays: number; currentStreak: number; longestStreak: number;
@@ -318,7 +318,12 @@ export default function StudyCalendar() {
 
   return (
     <div className="flex h-screen" style={{ background: "var(--bg)" }}>
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} subtitle="Estudos" showListSection={false} />
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        subtitle="Estudos" showListSection={false}
+        onItemDelete={setSessionToDelete}
+      />
 
       <div className="flex-1 overflow-y-auto">
         <Header onMenuClick={() => setSidebarOpen(true)} title="Calendário de Estudos" />
@@ -447,10 +452,10 @@ export default function StudyCalendar() {
                     className="cursor-pointer aspect-square rounded-lg sm:rounded-xl flex flex-col items-center justify-center relative transition-all"
                     style={{
                       border: `2px solid ${today
-                          ? "var(--text-active)"
-                          : isFinished
-                            ? "var(--correct)"
-                            : "var(--border)"
+                        ? "var(--text-active)"
+                        : isFinished
+                          ? "var(--correct)"
+                          : "var(--border)"
                         }`,
                     }}
                   >
