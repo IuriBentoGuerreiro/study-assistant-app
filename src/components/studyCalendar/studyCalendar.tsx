@@ -307,11 +307,23 @@ export default function StudyCalendar() {
 
   const handleSaveGoal = async () => {
     const totalSeconds = tempGoalHours * 3600 + tempGoalMinutes * 60 + tempGoalSecs;
-    if (totalSeconds < 300 || totalSeconds > 86400) return showToast("Mínimo 5 minutos e máximo 24 horas", "info");
-    try { if (goal) await updateDailyGoal({ dailyStudySeconds: totalSeconds }); else await createDailyGoal({ dailyStudySeconds: totalSeconds }); }
-    catch { showToast("Erro ao salvar", "error"); }
-  };
 
+    if (totalSeconds < 300 || totalSeconds > 86400) {
+      return showToast("Mínimo 5 minutos e máximo 24 horas", "info");
+    }
+
+    try {
+      if (goal && goal.id) {
+        await updateDailyGoal({ dailyStudySeconds: totalSeconds });
+      } else {
+        await createDailyGoal({ dailyStudySeconds: totalSeconds });
+      }
+      showToast("Meta salva com sucesso!", "success");
+    } catch {
+      showToast("Erro ao salvar", "error");
+    }
+  };
+  
   const stats = calculateStats();
   const progress = Math.min((elapsedSeconds / dailyGoalSeconds) * 100, 100);
   const days = getDaysInMonth();
@@ -531,7 +543,7 @@ export default function StudyCalendar() {
 
             {/* Modal footer */}
             <div className="shrink-0 px-4 sm:px-5 py-4" style={{ borderTop: "1px solid var(--border)", background: "var(--bg-card)" }}>
-              <button onClick={() => setSelectedDate(null)} className="w-full py-3 text-sm font-black rounded-xl transition-all tracking-wide" style={{ background: "var(--text)", color: "var(--bg)" } }>
+              <button onClick={() => setSelectedDate(null)} className="w-full py-3 text-sm font-black rounded-xl transition-all tracking-wide" style={{ background: "var(--text)", color: "var(--bg)" }}>
                 Fechar
               </button>
             </div>
