@@ -259,6 +259,7 @@ export default function Sidebar({
           onClick={() => setSidebarOpen(false)}
         />
       )}
+      
       <ConfirmationModal
         isOpen={isDeleteModalOpen}
         title="Excluir Sessão"

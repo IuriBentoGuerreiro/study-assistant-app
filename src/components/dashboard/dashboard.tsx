@@ -37,14 +37,12 @@ export default function DashboardView() {
         const dashboardResponse = await api.get("/dashboard");
         setDashboard(dashboardResponse.data);
 
-        const resumesResponse = await api.get(`/resume`);
+        const resumesResponse = await api.get("/resume");
         setResumes(resumesResponse.data);
 
-        const userId = Number(sessionStorage.getItem("userId"));
-        if (userId) {
-          const sessionsResponse = await api.get(`/session/${userId}`);
+          const sessionsResponse = await api.get("/session");
           setSessions(sessionsResponse.data);
-        }
+        
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard", error);
       } finally {
