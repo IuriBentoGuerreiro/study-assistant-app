@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import {
-  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock,
-  TrendingUp, Flame, Award, Settings, CheckCircle2, Trash, Info, Flag,
+  Calendar as CalendarIcon, Clock,
+  TrendingUp, Flame, Award, CheckCircle2, Trash, Info,
 } from "lucide-react";
 import Sidebar from "../ui/Sidebar";
 import Header from "../ui/Header";
@@ -12,6 +12,10 @@ import { StudyGoalRequest, StudyGoalResponse } from "@/src/types/StudyGoal";
 import { StudyDayResponse } from "@/src/types/StudyDay";
 import { useToast } from "@/hooks/useToast";
 import ConfirmationModal from "../ui/ConfirmationModal";
+import { SettingsModal } from "../ui/SettingsModal";
+import { CalendarGrid } from "../ui/CalendarGrid";
+import { StudyTimer } from "../ui/studyTImer";
+import { StatCard } from "../ui/StatCard";
 
 type StudyStats = {
   totalDays: number; currentStreak: number; longestStreak: number;
@@ -36,10 +40,6 @@ function toLocalTimeString(dateTime: string | null | undefined): string {
   try {
     return parseLocalDateTime(dateTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
   } catch { return ""; }
-}
-function rebuildISOWithLocalTime(originalISO: string, newHHMM: string): string {
-  const [datePart] = originalISO.split("T");
-  return `${datePart}T${newHHMM}:00`;
 }
 function formatDate(date: Date): string {
   const year = date.getFullYear();
@@ -69,31 +69,37 @@ function calculateElapsedSeconds(startTime: string, totalPausedSeconds: number, 
 }
 
 export default function StudyCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [dailyGoalSeconds, setDailyGoalSeconds] = useState(3600);
   const [showSettings, setShowSettings] = useState(false);
-  const [goal, setGoal] = useState<StudyGoalResponse | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [timerDescription, setTimerDescription] = useState("");
+  const [activePauseId, setActivePauseId] = useState<number | null>(null);
+
+  const totalPausedSecondsRef = useRef(0);
+  const pauseStartTimeRef = useRef<number | null>(null);
+
   const [studyDay, setStudyDay] = useState<StudyDayResponse | null>(null);
   const [studySessions, setStudySessions] = useState<StudyDayResponse[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [sessionsOfSelectedDate, setSessionsOfSelectedDate] = useState<StudyDayResponse[]>([]);
-  const [manualStart, setManualStart] = useState("08:00");
-  const [manualEnd, setManualEnd] = useState("09:00");
-  const [timerDescription, setTimerDescription] = useState("");
-  const [modalDescription, setModalDescription] = useState("");
+
+  const [goal, setGoal] = useState<StudyGoalResponse | null>(null);
+  const [dailyGoalSeconds, setDailyGoalSeconds] = useState(3600);
   const [tempGoalHours, setTempGoalHours] = useState(1);
   const [tempGoalMinutes, setTempGoalMinutes] = useState(0);
   const [tempGoalSecs, setTempGoalSecs] = useState(0);
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+  const [manualStart, setManualStart] = useState("08:00");
+  const [manualEnd, setManualEnd] = useState("09:00");
+  const [modalDescription, setModalDescription] = useState("");
+
   const { toasts, showToast, setToasts } = useToast();
-  const [isPaused, setIsPaused] = useState(false);
-  const [activePauseId, setActivePauseId] = useState<number | null>(null);
-  const totalPausedSecondsRef = useRef(0);
-  const pauseStartTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isTimerRunning || !studyDay?.startTime) return;
@@ -309,12 +315,8 @@ export default function StudyCalendar() {
   const stats = calculateStats();
   const progress = Math.min((elapsedSeconds / dailyGoalSeconds) * 100, 100);
   const days = getDaysInMonth();
-  const timerStartTimeValue = studyDay?.startTime ? toLocalTimeString(studyDay.startTime) : "";
   const selectedDateTotalSeconds = sessionsOfSelectedDate.reduce((acc, curr) => acc + (curr.studiedSeconds || 0), 0);
   const selectedDatePct = dailyGoalSeconds > 0 ? Math.min(100, Math.round((selectedDateTotalSeconds / dailyGoalSeconds) * 100)) : 0;
-  const goalHours = Math.floor(dailyGoalSeconds / 3600);
-  const goalMinutes = Math.floor((dailyGoalSeconds % 3600) / 60);
-  const goalSecs = dailyGoalSeconds % 60;
 
   return (
     <div className="flex h-screen" style={{ background: "var(--bg)" }}>
@@ -330,81 +332,21 @@ export default function StudyCalendar() {
 
         <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-8">
 
-          {/* TIMER */}
-          <div className="rounded-xl shadow-sm overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-            <div className="flex flex-col lg:flex-row items-center p-3 lg:p-4 gap-3 lg:gap-4">
-              <div className="flex-1 w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="flex-1 relative group">
-                  <input
-                    type="text"
-                    value={timerDescription}
-                    onChange={(e) => setTimerDescription(e.target.value)}
-                    onBlur={(e) => { if (isTimerRunning && studyDay) handleUpdateCurrentSession({ description: e.target.value }); }}
-                    placeholder="No que você está trabalhando?"
-                    className="w-full px-4 py-3 text-sm lg:text-base font-medium outline-none transition-all bg-transparent"
-                    style={{ color: "var(--text)", caretColor: "var(--text-active)" }}
-                  />
-                  <div className="absolute bottom-0 left-0 h-0.5 w-0 bg-blue-500 transition-all duration-300 group-focus-within:w-full" />
-                </div>
+          <StudyTimer
+            timerDescription={timerDescription}
+            setTimerDescription={setTimerDescription}
+            isTimerRunning={isTimerRunning}
+            isPaused={isPaused}
+            elapsedSeconds={elapsedSeconds}
+            progress={progress}
+            onStart={() => createStudyDay(timerDescription)}
+            onPause={startPause}
+            onResume={finishPause}
+            onFinish={finishStudyDay}
+            onOpenSettings={() => setShowSettings(true)}
+            formatTime={formatTime}
+          />
 
-                {isTimerRunning && studyDay && (
-                  <>
-                    <div className="hidden sm:block w-px h-8 shrink-0" style={{ background: "var(--border)" }} />
-                    <div className="relative group/starttime shrink-0 mt-1 sm:mt-0">
-                      <label className="absolute -top-3.5 left-0 text-[9px] font-bold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Início</label>
-                      <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 transition-all" style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)" }}>
-                          <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                        </svg>
-                        <input type="time" key={timerStartTimeValue} defaultValue={timerStartTimeValue}
-                          className="text-[12px] font-mono font-bold bg-transparent border-none outline-none w-22.5 p-0 cursor-pointer"
-                          style={{ color: "var(--text)" }}
-                          onBlur={(e) => { if (!e.target.value || !studyDay) return; handleUpdateCurrentSession({ startTime: rebuildISOWithLocalTime(studyDay.startTime, e.target.value) }); }}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="hidden lg:block w-px h-10 shrink-0" style={{ background: "var(--border)" }} />
-
-              <div className="flex items-center justify-between w-full lg:w-auto gap-6 lg:gap-8 px-2 lg:px-0">
-                <div className="flex flex-col items-start lg:items-end">
-                  <span className="text-3xl font-mono font-bold tabular-nums tracking-tight" style={{ color: "var(--text)" }}>{formatTime(elapsedSeconds)}</span>
-                  <span className="text-xs font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>{!isTimerRunning ? "Parado" : isPaused ? "Pausado" : "Gravando"}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setShowSettings(true)}
-                    className="flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold rounded-lg transition-all"
-                    style={{ background: "var(--bg-hover)", color: "var(--text-muted)", border: "1px solid var(--border)" }}
-                  >
-                    <Award size={14} /> Meta
-                  </button>
-                  <div className="flex items-center gap-2">
-                    {isTimerRunning && (
-                      <button onClick={finishStudyDay} className="px-4 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-all flex items-center justify-center font-bold">
-                        <Flag size={14} />
-                      </button>
-                    )}
-                    {!isTimerRunning ? (
-                      <button onClick={() => createStudyDay(timerDescription)} className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all flex items-center justify-center">▶</button>
-                    ) : isPaused ? (
-                      <button onClick={finishPause} className="w-12 h-12 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full shadow-lg transition-all flex items-center justify-center">⏵</button>
-                    ) : (
-                      <button onClick={startPause} className="w-12 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg transition-all flex items-center justify-center">❚❚</button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Progress bar */}
-            <div className="w-full h-1 rounded-b-xl overflow-hidden" style={{ background: "var(--bg-subtle)" }}>
-              <div className="h-full bg-blue-500 transition-all duration-1000 ease-linear" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-
-          {/* STATS */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
             <StatCard icon={<CalendarIcon className="text-blue-600 w-4 h-4" />} label="Dias" value={stats.totalDays} bg="bg-blue-100" />
             <StatCard icon={<Flame className="text-orange-600 w-4 h-4" />} label="Streak" value={stats.currentStreak} bg="bg-orange-100" />
@@ -413,121 +355,48 @@ export default function StudyCalendar() {
             <StatCard icon={<TrendingUp className="text-cyan-600 w-4 h-4" />} label="Média" value={`${safeMinutes(stats.averageSeconds)}m`} bg="bg-cyan-100" />
           </div>
 
-          {/* CALENDAR */}
-          <div className="rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-sm" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <button onClick={previousMonth} className="p-1.5 sm:p-2 rounded-lg transition-colors" style={{ color: "var(--text)" }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
-              >
-                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
-              <h2 className="text-base sm:text-xl font-bold capitalize" style={{ color: "var(--text)" }}>
-                {currentDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-              </h2>
-              <button onClick={nextMonth} className="p-1.5 sm:p-2 rounded-lg transition-colors" style={{ color: "var(--text)" }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
-              >
-                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
-            </div>
+          <CalendarGrid
+            currentDate={currentDate}
+            days={days}
+            onPrev={previousMonth}
+            onNext={nextMonth}
+            onDayClick={handleDayClick}
+            isToday={isToday}
+            isDateStudied={isDateStudied}
+            getStudySessionByDate={getStudySessionByDate}
+            dailyGoalSeconds={dailyGoalSeconds}
 
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
-              {["D", "S", "T", "Q", "Q", "S", "S"].map((day, index) => (
-                <div key={`${day}-${index}`} className="text-center text-[10px] sm:text-xs font-bold pb-1 sm:pb-2" style={{ color: "var(--text-muted)" }}>
-                  {day}
-                </div>
-              ))}
-
-              {days.map((date, i) => {
-                if (!date) return <div key={i} />;
-                const session = getStudySessionByDate(date);
-                const isFinished = isDateStudied(date);
-                const today = isToday(date);
-                return (
-                  <div
-                    key={i}
-                    onClick={() => date && handleDayClick(date)}
-                    className="cursor-pointer aspect-square rounded-lg sm:rounded-xl flex flex-col items-center justify-center relative transition-all"
-                    style={{
-                      border: `2px solid ${today
-                        ? "var(--text-active)"
-                        : isFinished
-                          ? "var(--correct)"
-                          : "var(--border)"
-                        }`,
-                    }}
-                  >
-                    <span className="text-xs sm:text-sm font-semibold" style={{ color: today ? "#2563eb" : "var(--text)" }}>
-                      {date.getDate()}
-                    </span>
-                    {isFinished && <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-500 mt-0.5" />}
-                    {session && !isFinished && session.studiedSeconds > 0 && (
-                      <div className="absolute bottom-0.5 sm:bottom-1 w-1/2 h-0.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
-                        <div className="h-full bg-blue-400" style={{ width: `${Math.min(100, (session.studiedSeconds / dailyGoalSeconds) * 100)}%` }} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          />
         </div>
       </div>
 
-      {/* SETTINGS MODAL */}
       {showSettings && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="rounded-2xl p-6 max-w-sm w-full shadow-2xl" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Settings className="w-6 h-6 text-blue-700" />
-              </div>
-              <h3 className="text-xl font-extrabold" style={{ color: "var(--text)" }}>Ajustar Meta</h3>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold mb-3 ml-1" style={{ color: "var(--text)" }}>Tempo de estudo por dia</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "Horas", max: 23, value: tempGoalHours, onChange: setTempGoalHours },
-                    { label: "Minutos", max: 59, value: tempGoalMinutes, onChange: setTempGoalMinutes },
-                    { label: "Segundos", max: 59, value: tempGoalSecs, onChange: setTempGoalSecs },
-                  ].map(({ label, max, value, onChange }) => (
-                    <div key={label} className="flex flex-col items-center gap-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{label}</span>
-                      <input
-                        type="number" min={0} max={max} value={value}
-                        onChange={(e) => onChange(Math.min(max, Math.max(0, Number(e.target.value))))}
-                        className="w-full p-3 rounded-xl text-2xl font-black text-center focus:ring-0 outline-none tabular-nums transition-colors"
-                        style={{ background: "var(--bg-subtle)", border: "2px solid var(--border)", color: "var(--text)" }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs font-medium ml-1 mt-3" style={{ color: "var(--text-muted)" }}>
-                  Meta atual: <span className="text-blue-500 font-bold">
-                    {goalHours > 0 && `${goalHours}h `}{goalMinutes > 0 && `${goalMinutes}min `}{goalSecs > 0 && `${goalSecs}s`}{dailyGoalSeconds === 0 && "não definida"}
-                  </span>
-                </p>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowSettings(false)} className="flex-1 py-3 rounded-xl font-bold transition-colors" style={{ background: "var(--bg-hover)", color: "var(--text)", border: "1px solid var(--border)" }}>Cancelar</button>
-                <button onClick={handleSaveGoal} className="flex-1 py-3 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg transition-all active:scale-95">Confirmar</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+
+          onSave={handleSaveGoal}
+
+          tempGoal={{
+            hours: tempGoalHours,
+            minutes: tempGoalMinutes,
+            secs: tempGoalSecs
+          }}
+
+          setTempGoal={(newGoal) => {
+            setTempGoalHours(newGoal.hours);
+            setTempGoalMinutes(newGoal.minutes);
+            setTempGoalSecs(newGoal.secs);
+          }}
+
+          currentGoalDisplay={formatDuration(dailyGoalSeconds)}
+        />
       )}
 
-      {/* DAY MODAL */}
       {selectedDate && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedDate(null)} />
           <div className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]" style={{ background: "var(--bg-card)" }}>
 
-            {/* Modal header */}
             <div className="shrink-0 px-4 sm:px-5 pt-4 sm:pt-5 pb-4" style={{ borderBottom: "1px solid var(--border)" }}>
               <div className="w-10 h-1 rounded-full mx-auto mb-3 sm:hidden" style={{ background: "var(--border)" }} />
               <div className="flex items-start justify-between gap-2">
@@ -567,11 +436,9 @@ export default function StudyCalendar() {
               </div>
             </div>
 
-            {/* Modal body */}
             <div className="flex-1 overflow-y-auto overscroll-contain">
               <div className="p-4 sm:p-5 space-y-5">
 
-                {/* Add session */}
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3" style={{ color: "var(--text-muted)" }}>Registrar sessão</p>
                   <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)" }}>
@@ -600,7 +467,6 @@ export default function StudyCalendar() {
                   </div>
                 </div>
 
-                {/* Sessions list */}
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-widest mb-3" style={{ color: "var(--text-muted)" }}>Sessões registradas</p>
                   <div className="space-y-2">
@@ -665,7 +531,7 @@ export default function StudyCalendar() {
 
             {/* Modal footer */}
             <div className="shrink-0 px-4 sm:px-5 py-4" style={{ borderTop: "1px solid var(--border)", background: "var(--bg-card)" }}>
-              <button onClick={() => setSelectedDate(null)} className="w-full py-3 text-white text-sm font-black rounded-xl transition-all tracking-wide" style={{ background: "var(--sidebar-bg)" }}>
+              <button onClick={() => setSelectedDate(null)} className="w-full py-3 text-sm font-black rounded-xl transition-all tracking-wide" style={{ background: "var(--text)", color: "var(--bg)" } }>
                 Fechar
               </button>
             </div>
@@ -694,18 +560,6 @@ export default function StudyCalendar() {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: string | number; bg: string }) {
-  return (
-    <div className="rounded-lg sm:rounded-xl p-3 sm:p-4 shadow-sm" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center gap-2 sm:gap-3 mb-1">
-        <div className={`w-7 h-7 sm:w-8 sm:h-8 ${bg} rounded-lg flex items-center justify-center`}>{icon}</div>
-        <span className="text-[10px] sm:text-xs font-medium" style={{ color: "var(--text-muted)" }}>{label}</span>
-      </div>
-      <div className="text-lg sm:text-2xl font-bold" style={{ color: "var(--text)" }}>{value}</div>
     </div>
   );
 }
