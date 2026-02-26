@@ -101,6 +101,8 @@ export default function StudyCalendar() {
 
   const { toasts, showToast, setToasts } = useToast();
 
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     if (!isTimerRunning || !studyDay?.startTime) return;
     const update = () => {
@@ -113,45 +115,63 @@ export default function StudyCalendar() {
   }, [isTimerRunning, isPaused, studyDay?.startTime]);
 
   useEffect(() => { loadStudySessions(); }, [currentDate]);
+
   useEffect(() => {
-    const init = async () => { await loadStudyGoal(); await loadStudySessions(); await loadStudyDayActive(); };
+    setIsLoading(true);
+    const init = async () => {
+      try {
+        await Promise.all([
+          loadStudyGoal(),
+          loadStudySessions(),
+          loadStudyDayActive()
+        ]);
+      } catch {
+        showToast("Erro ao carregar dados", "error")
+      }
+      finally {
+        setIsLoading(false);
+      }
+    };
+
     init();
   }, []);
 
   const startPause = async () => {
     if (!studyDay) return;
     try {
+      setIsLoading(true);
+
       const { data } = await api.post(`/pauses/study-day/${studyDay.id}`);
       setActivePauseId(data.id); pauseStartTimeRef.current = Date.now(); setIsPaused(true);
-    } catch { showToast("Erro ao iniciar pausa", "error"); }
+
+      setIsLoading(false);
+    } catch {
+      showToast("Erro ao iniciar pausa", "error");
+      setIsLoading(false);
+    }
   };
 
   const finishPause = async () => {
     if (!activePauseId) return;
     try {
+      setIsLoading(true);
       await api.patch(`/pauses/${activePauseId}/finish`);
       if (pauseStartTimeRef.current !== null) {
         totalPausedSecondsRef.current += Math.floor((Date.now() - pauseStartTimeRef.current) / 1000);
         pauseStartTimeRef.current = null;
       }
+      setIsLoading(false);
       setIsPaused(false); setActivePauseId(null);
-    } catch { showToast("Erro ao finalizar pausa", "error"); }
+    } catch {
+      showToast("Erro ao finalizar pausa", "error");
+      setIsLoading(false);
+    }
   };
 
   const handleDayClick = (date: Date) => {
     const dateStr = formatDate(date);
     setSessionsOfSelectedDate(studySessions.filter((s) => s.studyDate === dateStr));
     setSelectedDate(date); setModalDescription("");
-  };
-
-  const handleUpdateCurrentSession = async (fields: Partial<{ description: string; startTime: string }>) => {
-    if (!studyDay) return;
-    try {
-      const updated = { ...studyDay, ...fields };
-      await api.put(`/study-day/${studyDay.id}`, { description: updated.description, startTime: updated.startTime, studyDate: updated.studyDate, studiedSeconds: updated.studiedSeconds ?? 0 });
-      setStudyDay(updated);
-      if (fields.startTime) { setElapsedSeconds(calculateElapsedSeconds(fields.startTime, totalPausedSecondsRef.current)); showToast("Atualizado com sucesso", "success"); }
-    } catch { showToast("Erro ao atualizar sessão ativa", "error"); }
   };
 
   const handleUpdateSession = async (session: StudyDayResponse, newDescription: string, newStartTime: string, newEndTime: string) => {
@@ -230,19 +250,23 @@ export default function StudyCalendar() {
 
   const createStudyDay = async (desc: string) => {
     try {
+      setIsLoading(true);
       const { data } = await api.post<StudyDayResponse>("/study-day", { description: desc });
       setIsTimerRunning(true); setStudyDay(data); totalPausedSecondsRef.current = 0; pauseStartTimeRef.current = null; setElapsedSeconds(0);
+      setIsLoading(false);
     } catch { showToast("Erro ao iniciar", "error"); }
   };
 
   const finishStudyDay = async () => {
     try {
       if (!studyDay) return;
+      setIsLoading(true);
       await api.put<StudyDayResponse>(`/study-day/finish/${studyDay.id}`);
       setIsTimerRunning(false); setStudyDay(null); setElapsedSeconds(0); setTimerDescription("");
       setIsPaused(false); setActivePauseId(null); totalPausedSecondsRef.current = 0; pauseStartTimeRef.current = null;
       loadStudySessions(); showToast("Sessão finalizada com sucesso!", "success");
-    } catch { showToast("Erro ao finalizar", "error"); }
+      setIsLoading(false);
+    } catch { showToast("Erro ao finalizar", "error"); setIsLoading(false); }
   };
 
   const createDailyGoal = async (request: StudyGoalRequest) => {
@@ -323,7 +347,7 @@ export default function StudyCalendar() {
       showToast("Erro ao salvar", "error");
     }
   };
-  
+
   const stats = calculateStats();
   const progress = Math.min((elapsedSeconds / dailyGoalSeconds) * 100, 100);
   const days = getDaysInMonth();
@@ -349,6 +373,7 @@ export default function StudyCalendar() {
             setTimerDescription={setTimerDescription}
             isTimerRunning={isTimerRunning}
             isPaused={isPaused}
+            isLoading={isLoading}
             elapsedSeconds={elapsedSeconds}
             progress={progress}
             onStart={() => createStudyDay(timerDescription)}
