@@ -103,6 +103,10 @@ export default function StudyCalendar() {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  const currentStartTime = studyDay?.startTime
+    ? toLocalTimeString(studyDay.startTime)
+    : "";
+
   useEffect(() => {
     if (!isTimerRunning || !studyDay?.startTime) return;
     const update = () => {
@@ -174,21 +178,6 @@ export default function StudyCalendar() {
     setSelectedDate(date); setModalDescription("");
   };
 
-  const handleUpdateSession = async (session: StudyDayResponse, newDescription: string, newStartTime: string, newEndTime: string) => {
-    try {
-      const dateStr = session.studyDate;
-      const [h1, m1] = newStartTime.split(":").map(Number);
-      const [h2, m2] = newEndTime.split(":").map(Number);
-      if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) { showToast("Horários inválidos.", "error"); return; }
-      const totalSeconds = (h2 * 60 + m2 - (h1 * 60 + m1)) * 60;
-      if (totalSeconds < 0) { showToast("O horário de fim deve ser posterior ao início.", "error"); return; }
-      await api.put(`/study-day/${session.id}`, { description: newDescription || "Estudo sem título", studiedSeconds: totalSeconds, studyDate: dateStr, startTime: `${dateStr}T${newStartTime.substring(0, 5)}:00`, endTime: newEndTime ? `${dateStr}T${newEndTime.substring(0, 5)}:00` : null });
-      await loadStudySessions();
-      const { data } = await api.get<StudyDayResponse[]>(`/study-day/calendar?start=${dateStr}&end=${dateStr}`);
-      setSessionsOfSelectedDate(data);
-    } catch { showToast("Erro ao atualizar sessão", "error"); }
-  };
-
   const handleStudyDayManualSave = async (date: Date) => {
     const [h1, m1] = manualStart.split(":").map(Number);
     const [h2, m2] = manualEnd.split(":").map(Number);
@@ -212,6 +201,65 @@ export default function StudyCalendar() {
       await loadStudySessions(); showToast("Sessão excluída com sucesso.", "success");
     } catch { showToast("Não foi possível excluir a sessão.", "error"); }
     finally { setIsDeleteModalOpen(false); setSessionToDelete(null); }
+  };
+
+
+  const updateStudyDay = async (
+    session: StudyDayResponse,
+    fields: Partial<{ description: string; startTime: string; endTime: string }>
+  ) => {
+    try {
+      const dateStr = session.studyDate;
+
+      const startTimeISO = fields.startTime
+        ? `${dateStr}T${fields.startTime.substring(0, 5)}:00`
+        : session.startTime;
+
+      const endTimeISO = fields.endTime
+        ? `${dateStr}T${fields.endTime.substring(0, 5)}:00`
+        : session.endTime;
+
+      let studiedSeconds = session.studiedSeconds || 0;
+      if (fields.startTime || fields.endTime) {
+        if (endTimeISO) {
+          const start = parseLocalDateTime(startTimeISO).getTime();
+          const end = parseLocalDateTime(endTimeISO).getTime();
+          studiedSeconds = Math.max(0, Math.floor((end - start) / 1000));
+
+          if (end < start) {
+            showToast("O fim deve ser após o início", "error");
+            return;
+          }
+        }
+      }
+
+      const payload = {
+        description: fields.description ?? session.description,
+        startTime: startTimeISO,
+        endTime: endTimeISO,
+        studyDate: dateStr,
+        studiedSeconds
+      };
+
+      await api.put(`/study-day/${session.id}`, payload);
+
+      if (studyDay?.id === session.id) {
+        const updatedData = { ...session, ...payload };
+        setStudyDay(updatedData);
+        if (fields.description) setTimerDescription(fields.description);
+      }
+
+      setSessionsOfSelectedDate(prev =>
+        prev.map(s => s.id === session.id ? { ...s, ...payload } : s)
+      );
+
+      await loadStudySessions();
+      showToast("Atualizado com sucesso", "success");
+
+    } catch (error) {
+      showToast("Erro ao atualizar sessão", "error");
+      console.error(error);
+    }
   };
 
   const loadStudyGoal = async () => {
@@ -369,19 +417,23 @@ export default function StudyCalendar() {
         <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-8">
 
           <StudyTimer
-            timerDescription={timerDescription}
-            setTimerDescription={setTimerDescription}
-            isTimerRunning={isTimerRunning}
-            isPaused={isPaused}
+            activeSession={studyDay}
             isLoading={isLoading}
             elapsedSeconds={elapsedSeconds}
             progress={progress}
-            onStart={() => createStudyDay(timerDescription)}
-            onPause={startPause}
-            onResume={finishPause}
-            onFinish={finishStudyDay}
-            onOpenSettings={() => setShowSettings(true)}
             formatTime={formatTime}
+            onOpenSettings={() => setShowSettings(true)}
+            actions={{
+              onStart: createStudyDay,
+              onPause: startPause,
+              onResume: finishPause,
+              onFinish: finishStudyDay,
+              onUpdate: (fields) => {
+                if (studyDay) {
+                  updateStudyDay(studyDay, fields);
+                }
+              },
+            }}
           />
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
@@ -519,8 +571,11 @@ export default function StudyCalendar() {
                             <input type="text" defaultValue={session.description} placeholder="Descrição"
                               className="flex-1 min-w-0 text-sm font-semibold bg-transparent border-none outline-none focus:ring-0"
                               style={{ color: "var(--text)" }}
-                              onBlur={(e) => { if (e.target.value !== session.description) handleUpdateSession(session, e.target.value, currentStart, currentEnd); }}
-                            />
+                              onBlur={(e) => {
+                                if (e.target.value !== session.description) {
+                                  updateStudyDay(session, { description: e.target.value });
+                                }
+                              }} />
                             <button onClick={() => { setSessionToDelete(session.id); setIsDeleteModalOpen(true); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
                               <Trash size={16} />
                             </button>
@@ -537,9 +592,12 @@ export default function StudyCalendar() {
                                     className="text-[11px] sm:text-[12px] font-mono font-bold bg-transparent border-none outline-none w-22.5 p-0 cursor-pointer"
                                     style={{ color: "var(--text)" }}
                                     onBlur={(e) => {
-                                      if (!e.target.value || e.target.value === timeVal) return;
-                                      if (idx === 0) handleUpdateSession(session, session.description, e.target.value, currentEnd);
-                                      else handleUpdateSession(session, session.description, currentStart, e.target.value);
+                                      const newValue = e.target.value;
+                                      if (!newValue || newValue === timeVal) return;
+
+                                      updateStudyDay(session, {
+                                        [idx === 0 ? 'startTime' : 'endTime']: newValue
+                                      });
                                     }}
                                   />
                                 </div>

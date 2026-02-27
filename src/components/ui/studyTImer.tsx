@@ -1,103 +1,187 @@
 import { Award, Flag, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { ContentLoader } from "./ContentLoad";
+import { useEffect, useState } from "react";
+import { StudyDayResponse } from "@/src/types/StudyDay";
 
 interface StudyTimerProps {
-  timerDescription: string;
-  setTimerDescription: (value: string) => void;
-  isTimerRunning: boolean;
-  isPaused: boolean;
+  activeSession: StudyDayResponse | null;
   isLoading: boolean;
   elapsedSeconds: number;
   progress: number;
-  onStart: () => void;
-  onPause: () => void;
-  onResume: () => void;
-  onFinish: () => void;
-  onOpenSettings: () => void;
   formatTime: (seconds: number) => string;
+  onOpenSettings: () => void;
+  actions: {
+    onStart: (description: string, startTime?: string) => void;
+    onPause: () => void;
+    onResume: () => void;
+    onFinish: () => void;
+    onUpdate: (fields: Partial<{ description: string; startTime: string }>) => void;
+  };
 }
 
 export function StudyTimer({
-  timerDescription,
-  setTimerDescription,
-  isTimerRunning,
-  isPaused,
+  activeSession,
   isLoading,
   elapsedSeconds,
   progress,
-  onStart,
-  onPause,
-  onResume,
-  onFinish,
+  formatTime,
   onOpenSettings,
-  formatTime
+  actions
 }: StudyTimerProps) {
+  const [localDescription, setLocalDescription] = useState("");
+  const [localStartTime, setLocalStartTime] = useState("");
+
+  const isTimerRunning = !!activeSession;
+  const isPaused = !!activeSession?.activePause;
+
+  const getDisplayTime = (isoString?: string) => {
+    if (!isoString) return "";
+    return isoString.split("T")[1]?.substring(0, 5) || "";
+  };
+
+  useEffect(() => {
+    setLocalDescription(activeSession?.description || "");
+    setLocalStartTime(getDisplayTime(activeSession?.startTime));
+  }, [activeSession]);
+
+  const handleBlurDescription = () => {
+    if (isTimerRunning && localDescription !== activeSession?.description) {
+      actions.onUpdate({ description: localDescription });
+    }
+  };
+
+  const handleBlurStartTime = () => {
+    const originalTime = getDisplayTime(activeSession?.startTime);
+    if (isTimerRunning && localStartTime && localStartTime !== originalTime) {
+      actions.onUpdate({ startTime: localStartTime });
+    }
+  };
 
   return (
-    <div className="rounded-xl shadow-sm overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-      <div className="flex flex-col lg:flex-row items-center p-3 lg:p-4 gap-3 lg:gap-4">
-        <div className="flex-1 w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <input
-            type="text"
-            value={timerDescription}
-            onChange={(e) => setTimerDescription(e.target.value)}
-            placeholder="No que você está trabalhando?"
-            className="w-full px-4 py-3 text-sm lg:text-base font-medium outline-none bg-transparent"
-            style={{ color: "var(--text)" }}
-          />
-        </div>
+    <div
+      className="rounded-2xl shadow-md overflow-hidden"
+      style={{
+        background: "var(--bg-card)",
+        border: "1px solid var(--border)"
+      }}
+    >
+      <div className="flex flex-col p-4 gap-4">
 
-        <div className="flex items-center justify-between w-full lg:w-auto gap-6 lg:gap-8 px-2">
-          <div className="flex flex-col items-end">
-            <span className="text-3xl font-mono font-bold tabular-nums" style={{ color: "var(--text)" }}>
+        <input
+          type="text"
+          value={localDescription}
+          onChange={(e) => setLocalDescription(e.target.value)}
+          onBlur={handleBlurDescription}
+          placeholder="No que você está trabalhando?"
+          className="w-full px-4 py-3 text-base font-medium outline-none bg-transparent rounded-xl border"
+          style={{
+            color: "var(--text)",
+            borderColor: "var(--border)"
+          }}
+        />
+
+        <div className="flex items-center justify-between gap-6">
+
+          <div className="flex flex-col">
+            <span
+              className="text-xs font-medium"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Início
+            </span>
+
+            <input
+              type="time"
+              value={localStartTime}
+              onChange={(e) => setLocalStartTime(e.target.value)}
+              onBlur={handleBlurStartTime}
+              className="mt-1 px-3 py-2 text-base font-mono font-bold rounded-xl border bg-transparent"
+              style={{
+                color: "var(--text)",
+                borderColor: "var(--border)"
+              }}
+            />
+          </div>
+
+          <div className="flex flex-col items-end text-right">
+            <div
+              className="text-3xl font-mono font-bold tabular-nums"
+              style={{ color: "var(--text)" }}
+            >
               {formatTime(elapsedSeconds)}
-            </span>
-            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-              {!isTimerRunning ? "Parado" : isPaused ? "Pausado" : "Gravando"}
-            </span>
+            </div>
+
+            <div
+              className="text-xs font-medium"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {!isTimerRunning
+                ? "Parado"
+                : isPaused
+                  ? "Pausado"
+                  : "Gravando"}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-
-            {isLoading ? (
-              <div className="flex items-center justify-center w-35 h-12">
-                <Loader2 className="animate-spin w-5 h-5 text-blue-500" />
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={onOpenSettings}
-                  className="p-2.5 rounded-lg"
-                  style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}
-                >
-                  <Award size={14} />
-                </button>
-
-                {isTimerRunning && (
-                  <button
-                    onClick={onFinish}
-                    className="w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center"
-                  >
-                    <Flag size={14} />
-                  </button>
-                )}
-
-                <button
-                  onClick={!isTimerRunning ? onStart : isPaused ? onResume : onPause}
-                  className={`w-12 h-12 rounded-full text-white shadow-lg ${!isTimerRunning ? 'bg-blue-600' : isPaused ? 'bg-yellow-500' : 'bg-orange-500'
-                    }`}
-                >
-                  {!isTimerRunning ? "▶" : isPaused ? "⏵" : "❚❚"}
-                </button>
-              </>
-            )}
-          </div>
         </div>
+        {isLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="animate-spin w-6 h-6 text-blue-500" />
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+
+            <button
+              onClick={onOpenSettings}
+              className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border"
+              style={{
+                background: "var(--bg-hover)",
+                borderColor: "var(--border)"
+              }}
+            >
+              <Award size={16} />
+              Metas
+            </button>
+
+            {isTimerRunning && (
+              <button
+                onClick={actions.onFinish}
+                className="flex-1 py-3 bg-red-600 text-white rounded-xl flex items-center justify-center gap-2"
+              >
+                <Flag size={16} />
+                Finalizar
+              </button>
+            )}
+
+            <button
+              onClick={() =>
+                !isTimerRunning
+                  ? actions.onStart(localDescription, localStartTime)
+                  : isPaused
+                    ? actions.onResume()
+                    : actions.onPause()
+              }
+              className={`flex-1 py-3 rounded-xl text-white font-semibold transition-all active:scale-95 ${!isTimerRunning
+                ? "bg-blue-600"
+                : isPaused
+                  ? "bg-yellow-500"
+                  : "bg-orange-500"
+                }`}
+            >
+              {!isTimerRunning
+                ? "Iniciar"
+                : isPaused
+                  ? "Retomar"
+                  : "Pausar"}
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="w-full h-1" style={{ background: "var(--bg-subtle)" }}>
-        <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${progress}%` }} />
+      <div className="w-full h-2" style={{ background: "var(--bg-subtle)" }}>
+        <div
+          className="h-full bg-blue-500 transition-all duration-1000"
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </div>
   );
