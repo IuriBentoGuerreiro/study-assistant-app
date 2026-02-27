@@ -144,30 +144,48 @@ export default function StudyCalendar() {
     if (!studyDay) return;
     try {
       setIsLoading(true);
-
       const { data } = await api.post(`/pauses/study-day/${studyDay.id}`);
-      setActivePauseId(data.id); pauseStartTimeRef.current = Date.now(); setIsPaused(true);
 
-      setIsLoading(false);
+      setActivePauseId(data.id);
+      pauseStartTimeRef.current = Date.now();
+      setIsPaused(true);
+
+      setStudyDay(prev => prev ? {
+        ...prev,
+        activePause: data
+      } : null);
+
     } catch {
       showToast("Erro ao iniciar pausa", "error");
+    } finally {
       setIsLoading(false);
     }
   };
 
   const finishPause = async () => {
-    if (!activePauseId) return;
+    const pId = activePauseId || studyDay?.activePause?.id;
+    if (!pId || !studyDay) return;
+
     try {
       setIsLoading(true);
-      await api.patch(`/pauses/${activePauseId}/finish`);
+      await api.patch(`/pauses/${pId}/finish`);
+
       if (pauseStartTimeRef.current !== null) {
         totalPausedSecondsRef.current += Math.floor((Date.now() - pauseStartTimeRef.current) / 1000);
         pauseStartTimeRef.current = null;
       }
-      setIsLoading(false);
-      setIsPaused(false); setActivePauseId(null);
+
+      setIsPaused(false);
+      setActivePauseId(null);
+
+      setStudyDay(prev => prev ? {
+        ...prev,
+        activePause: undefined
+      } : null);
+
     } catch {
       showToast("Erro ao finalizar pausa", "error");
+    } finally {
       setIsLoading(false);
     }
   };
