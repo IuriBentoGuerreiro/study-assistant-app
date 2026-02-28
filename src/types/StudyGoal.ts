@@ -3,7 +3,7 @@ export interface StudyGoalRequest {
 }
 
 export interface StudyGoalResponse {
-  id: number;
-  userId: number;
+  id: string;
+  userId: string;
   dailyStudySeconds: number;
 }

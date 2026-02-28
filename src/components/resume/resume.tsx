@@ -13,18 +13,18 @@ import Header from "../ui/Header";
 import { ContentLoader } from "../ui/ContentLoad";
 
 type ResumeListItem = {
-  id: number;
+  id: string;
   title: string;
   createdAt: string;
 };
 
 type Resume = {
-  id: number;
+  id: string;
   text: string;
 };
 
 type ResumeProps = {
-  initialResumeId?: number;
+  initialResumeId?: string;
 };
 
 
@@ -37,7 +37,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
-  const [activeResumeId, setActiveResumeId] = useState<number | null>(null);
+  const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
 
   const [isLoadingResume, setIsLoadingResume] = useState(false);
 
@@ -51,7 +51,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
 
   useEffect(() => { loadResumes(); }, []);
 
-  const goToResume = (resumeId: number | null) => {
+  const goToResume = (resumeId: string | null) => {
     if (resumeId) {
       router.push(`/resume/${resumeId}`, { scroll: false });
     } else {
@@ -92,7 +92,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
     }
   };
 
-  const loadResume = async (resumeId: number) => {
+  const loadResume = async (resumeId: string) => {
     try {
       setIsLoadingResume(true);
       const { data } = await api.get<Resume>(`/resume/${resumeId}`);
@@ -106,7 +106,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
     }
   };
 
-  const handleResumeSelect = (resumeId: number) => {
+  const handleResumeSelect = (resumeId: string) => {
     setActiveResumeId(resumeId);
     loadResume(resumeId);
     goToResume(resumeId);

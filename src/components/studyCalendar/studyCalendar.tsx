@@ -78,7 +78,7 @@ export default function StudyCalendar() {
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [timerDescription, setTimerDescription] = useState("");
-  const [activePauseId, setActivePauseId] = useState<number | null>(null);
+  const [activePauseId, setActivePauseId] = useState<string | null>(null);
 
   const totalPausedSecondsRef = useRef(0);
   const pauseStartTimeRef = useRef<number | null>(null);
@@ -94,7 +94,7 @@ export default function StudyCalendar() {
   const [tempGoalSecs, setTempGoalSecs] = useState(0);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [manualStart, setManualStart] = useState("08:00");
   const [manualEnd, setManualEnd] = useState("09:00");
   const [modalDescription, setModalDescription] = useState("");
@@ -212,7 +212,7 @@ export default function StudyCalendar() {
     } catch { showToast("Erro ao registrar manualmente", "error"); }
   };
 
-  const handleDeleteStudyDay = async (sessionId: number) => {
+  const handleDeleteStudyDay = async (sessionId: string) => {
     try {
       await api.delete(`/study-day/${sessionId}`);
       setSessionsOfSelectedDate((prev) => prev.filter((s) => s.id !== sessionId));

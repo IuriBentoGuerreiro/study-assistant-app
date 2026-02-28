@@ -9,8 +9,8 @@ export interface StudyDayRequest {
 }
 
 export interface StudyDayResponse {
-  id: number;
-  userId: number;
+  id: string;
+  userId: string;
   description: string;
   studyDate: string;
   studiedSeconds: number;
@@ -18,5 +18,8 @@ export interface StudyDayResponse {
   endTime: string | null;
   active: boolean;
   totalPausedSeconds: number;
-  activePause?: { id: number; startTime: string } | null;
+  activePause?: { 
+    id: string;
+    startTime: string; 
+  } | null;
 }

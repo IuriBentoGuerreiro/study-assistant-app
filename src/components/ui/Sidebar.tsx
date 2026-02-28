@@ -18,7 +18,7 @@ import ConfirmationModal from "./ConfirmationModal";
 import { useState } from "react";
 
 type ListItem = {
-  id: number;
+  id: string;
   title?: string;
   sessionName?: string;
   createdAt: string;
@@ -29,13 +29,13 @@ type SidebarProps = {
   setSidebarOpen: (open: boolean) => void;
   subtitle?: string;
   listItems?: ListItem[];
-  activeItemId?: number | null;
-  onItemSelect?: (id: number) => void;
+  activeItemId?: string | null;
+  onItemSelect?: (id: string) => void;
   onNewItem?: () => void;
   newItemLabel?: string;
   newItemIcon?: LucideIcon;
   showListSection?: boolean;
-  onItemDelete?: (id: number) => void;
+  onItemDelete?: (id: string) => void;
 };
 
 export default function Sidebar({
@@ -43,7 +43,7 @@ export default function Sidebar({
   setSidebarOpen,
   subtitle = "Assistente inteligente",
   listItems = [],
-  activeItemId = null,
+  activeItemId = "",
   onItemSelect,
   onNewItem,
   newItemLabel = "Nova sessão",
@@ -52,7 +52,7 @@ export default function Sidebar({
   onItemDelete,
 }: SidebarProps) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();

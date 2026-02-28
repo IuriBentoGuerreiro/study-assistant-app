@@ -1,5 +1,5 @@
 export type UserResponse = {
-  id:number;
+  id:string;
   username: string;
   roles: string[];
 };

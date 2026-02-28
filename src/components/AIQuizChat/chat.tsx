@@ -27,7 +27,7 @@ import { ContentLoader } from "../ui/ContentLoad";
 
 
 type ApiQuestion = {
-  id: number;
+  id: string;
   statement: string;
   type: keyof typeof QuestionType;
   correctAnswerIndex: number;
@@ -36,7 +36,7 @@ type ApiQuestion = {
 };
 
 type QuestionDTO = {
-  id: number;
+  id: string;
   type: keyof typeof QuestionType;
   statement: string;
   correctAnswerIndex: number;
@@ -45,7 +45,7 @@ type QuestionDTO = {
 };
 
 type Question = {
-  id: number;
+  id: string;
   type: QuestionType;
   statement: string;
   options?: string[];
@@ -54,7 +54,7 @@ type Question = {
 };
 
 type Session = {
-  id: number;
+  id: string;
   sessionName?: string;
   topic: string;
   questions: Question[];
@@ -62,7 +62,7 @@ type Session = {
 };
 
 type SessionListItem = {
-  id: number;
+  id: string;
   sessionName: string;
   createdAt: string;
 };
@@ -133,7 +133,7 @@ async function fetchCidades(uf: string): Promise<string[]> {
 }
 
 type AIQuizChatProps = {
-  initialSessionId?: number;
+  initialSessionId?: string;
 };
 
 export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
@@ -159,7 +159,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   const [isLoadingSession, setIsLoadingSession] = useState(false);
 
@@ -205,17 +205,17 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     setSessions(prev => [session, ...prev]);
   };
 
-  const removeSession = (sessionId: number) => {
+  const removeSession = (sessionId: string) => {
     setSessions(prev => prev.filter(s => s.id !== sessionId));
   };
 
-  const loadFullSession = async (sessionId: number) => {
+  const loadFullSession = async (sessionId: string) => {
     try {
       setIsLoadingSession(true);
       const { data } = await api.get<ApiFullSession>(`/session/${sessionId}/full`);
 
       const questions: Question[] = data.questions.map(q => ({
-        id: Number(q.id),
+        id: q.id,
         type: parseQuestionType(q.type),
         statement: q.statement,
         options: q.options ?? [],
@@ -308,7 +308,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     }
   };
 
-  const handleAnswer = async (questionId: number, optionIndex: number) => {
+  const handleAnswer = async (questionId: string, optionIndex: number) => {
     if (!currentSession) return;
 
     await api.put("/question/user/response", { questionId, selectedOptionIndex: optionIndex });
@@ -329,7 +329,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     });
   };
 
-  const handleDelete = async (sessionId: number) => {
+  const handleDelete = async (sessionId: string) => {
     try {
       await api.delete(`/session/${sessionId}`);
       removeSession(sessionId);
@@ -352,7 +352,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     router.push("/chat", { scroll: false });
   };
 
-  const handleSessionSelect = (sessionId: number) => {
+  const handleSessionSelect = (sessionId: string) => {
     router.push(`/chat/${sessionId}`, { scroll: false });
     setShowResultsModal(false);
   };

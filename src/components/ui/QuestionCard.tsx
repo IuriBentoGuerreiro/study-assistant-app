@@ -51,7 +51,7 @@ export function QuestionCard({
 }: {
   question: Question;
   index: number;
-  onAnswer: (id: number, index: number) => void;
+  onAnswer: (id: string, index: number) => void;
 }) {
   const isAnswered = q.userAnswerIndex !== undefined;
   const isCorrect = q.userAnswerIndex === q.correctAnswerIndex;
