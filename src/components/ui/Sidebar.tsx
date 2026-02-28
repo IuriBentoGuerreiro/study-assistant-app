@@ -58,18 +58,19 @@ export default function Sidebar({
   const pathname = usePathname();
 
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: MessageSquare, label: "Chat", path: "/chat" },
+    { icon: LayoutDashboard, label: "Painel", path: "/dashboard" },
+    { icon: MessageSquare, label: "Simulados", path: "/chat" },
     { icon: FileText, label: "Resumos", path: "/resume" },
-    { icon: CalendarIcon, label: "Calendário", path: "/study-calendar" },
-    { icon: Info, label: "Sobre", path: "/about" },
+    { icon: CalendarIcon, label: "Cronograma", path: "/study-calendar" },
+    { icon: Info, label: "Ajuda", path: "/about" },
   ];
 
   return (
     <>
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 shadow-lg transform transition-transform lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 shadow-lg transform transition-transform lg:static lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
         style={{
           background: "var(--sidebar-bg)",
           borderRight: "1px solid var(--border)",
@@ -88,10 +89,7 @@ export default function Sidebar({
                 <h1 className="font-bold" style={{ color: "var(--text)" }}>
                   BrainlyAI
                 </h1>
-                <p
-                  className="text-xs"
-                  style={{ color: "var(--text-muted)" }}
-                >
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                   {subtitle}
                 </p>
               </div>
@@ -111,7 +109,7 @@ export default function Sidebar({
             style={{ borderBottom: "1px solid var(--border)" }}
           >
             {menuItems.map((item) => {
-              const isActive = pathname === item.path;
+              const isActive = pathname.startsWith(item.path);
 
               return (
                 <button
@@ -119,18 +117,13 @@ export default function Sidebar({
                   onClick={() => router.push(item.path)}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
                   style={{
-                    background: isActive
-                      ? "var(--bg-active)"
-                      : "transparent",
-                    color: isActive
-                      ? "var(--text-active)"
-                      : "var(--text-muted)",
+                    background: isActive ? "var(--bg-active)" : "transparent",
+                    color: isActive ? "var(--text-active)" : "var(--text-muted)",
                     fontWeight: isActive ? 600 : 400,
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive)
-                      e.currentTarget.style.background =
-                        "var(--bg-hover)";
+                      e.currentTarget.style.background = "var(--bg-hover)";
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive)
@@ -149,14 +142,13 @@ export default function Sidebar({
               {onNewItem && (
                 <button
                   onClick={onNewItem}
-                  className="w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm transition-colors"
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm transition-colors mb-4"
                   style={{
                     border: "1px solid var(--border)",
                     color: "var(--text)",
                   }}
                   onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "var(--bg-hover)")
+                    (e.currentTarget.style.background = "var(--bg-hover)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -170,12 +162,13 @@ export default function Sidebar({
               {listItems.map((item) => (
                 <div
                   key={item.id}
-                  className="group relative w-full rounded-lg transition-colors hover:bg-(--bg-hover)"
+                  className="group relative w-full rounded-lg transition-colors"
                   style={{
-                    border: `1px solid ${activeItemId === item.id
-                      ? "var(--border-active)"
-                      : "var(--border)"
-                      }`,
+                    border: `1px solid ${
+                      activeItemId === item.id
+                        ? "var(--border-active)"
+                        : "var(--border)"
+                    }`,
                     background:
                       activeItemId === item.id
                         ? "var(--bg-active)"
@@ -183,18 +176,14 @@ export default function Sidebar({
                   }}
                 >
                   <button
-                    onClick={() =>
-                      onItemSelect && onItemSelect(item.id)
-                    }
+                    onClick={() => onItemSelect && onItemSelect(item.id)}
                     className="w-full text-left px-4 py-3 pr-12"
                   >
                     <p
                       className="font-medium truncate"
                       style={{ color: "var(--text)" }}
                     >
-                      {item.title ||
-                        item.sessionName ||
-                        "Sem título"}
+                      {item.title || item.sessionName || "Sem título"}
                     </p>
                     <p
                       className="text-xs"
@@ -204,24 +193,23 @@ export default function Sidebar({
                     </p>
                   </button>
 
-                  {(
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setItemToDelete(item.id); setIsDeleteModalOpen(true);
-                      }}
-                      className="
-      absolute right-2 top-1/2 -translate-y-1/2
-      p-1.5 rounded-md
-      opacity-100 md:opacity-0 md:group-hover:opacity-100
-      transition-opacity duration-200
-      hover:bg-red-100 dark:hover:bg-red-900/40
-    "
-                      aria-label="Excluir item"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setItemToDelete(item.id);
+                      setIsDeleteModalOpen(true);
+                    }}
+                    className="
+                      absolute right-2 top-1/2 -translate-y-1/2
+                      p-1.5 rounded-md
+                      opacity-100 md:opacity-0 md:group-hover:opacity-100
+                      transition-opacity duration-200
+                      hover:bg-red-100 dark:hover:bg-red-900/40
+                    "
+                    aria-label="Excluir item"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -232,14 +220,13 @@ export default function Sidebar({
           <div
             className="p-4 mt-auto"
             style={{ borderTop: "1px solid var(--border)" }}
-            onClick={logout}
           >
             <button
+              onClick={logout}
               className="w-full flex items-center px-4 py-3 rounded-lg transition-colors"
               style={{ color: "var(--text-muted)" }}
               onMouseEnter={(e) =>
-              (e.currentTarget.style.background =
-                "var(--bg-hover)")
+                (e.currentTarget.style.background = "var(--bg-hover)")
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = "transparent")
@@ -259,19 +246,23 @@ export default function Sidebar({
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      
+
       <ConfirmationModal
         isOpen={isDeleteModalOpen}
         title="Excluir Sessão"
         message="Tem certeza que deseja apagar este registro de estudo? Esta ação não pode ser desfeita."
         confirmLabel="Excluir"
-        onCancel={() => { setIsDeleteModalOpen(false); setItemToDelete(null); }}
+        onCancel={() => {
+          setIsDeleteModalOpen(false);
+          setItemToDelete(null);
+        }}
         onConfirm={() => {
           if (itemToDelete !== null && onItemDelete) {
             onItemDelete(itemToDelete);
             setIsDeleteModalOpen(false);
           }
-        }} />
+        }}
+      />
     </>
   );
 }
