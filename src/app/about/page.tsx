@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, MessageSquare, FileText, Sparkles, Target, BookOpen, Zap, CheckCircle } from "lucide-react";
+import { Brain, MessageSquare, FileText, Sparkles, Target, BookOpen, Zap, CheckCircle, CalendarIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/src/components/ui/Sidebar";
 import Header from "@/src/components/ui/Header";
@@ -15,6 +15,11 @@ export default function AboutPage() {
     { icon: BookOpen, title: "Resumos Automáticos", description: "Transforme conteúdos extensos em resumos claros e objetivos. Basta colar o texto ou descrever o tema desejado." },
     { icon: Zap, title: "Feedback Instantâneo", description: "Receba correções imediatas das questões respondidas, identifique acertos e erros para otimizar seu aprendizado." },
     { icon: Sparkles, title: "Histórico Completo", description: "Acesse suas sessões anteriores de questões e resumos salvos a qualquer momento para revisão." },
+    {
+      icon: CalendarIcon,
+      title: "Cronograma Inteligente",
+      description: "Organize seus estudos com um calendário personalizado. Defina metas diárias, acompanhe seu progresso e mantenha consistência na preparação."
+    },
   ];
 
   const benefits = [
@@ -101,6 +106,28 @@ export default function AboutPage() {
 
             <div className="rounded-xl p-6 sm:p-8" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
               <div className="flex items-center gap-3 mb-4">
+                <CalendarIcon className="w-6 h-6 text-blue-600" />
+                <h2 className="text-2xl font-semibold" style={{ color: "var(--text)" }}>
+                  Cronograma de Estudos
+                </h2>
+              </div>
+
+              <div className="space-y-3" style={{ color: "var(--text-muted)" }}>
+                {[
+                  ["1. Defina sua meta diária:", "Escolha quantas questões deseja resolver por dia ou quanto tempo quer estudar."],
+                  ["2. Acompanhe seu progresso:", "Visualize no calendário os dias concluídos e mantenha sua consistência."],
+                  ["3. Analise seu desempenho:", "Veja estatísticas semanais e mensais para ajustar sua rotina."],
+                  ["4. Crie disciplina:", "Transforme o hábito de estudar em um compromisso diário organizado."],
+                ].map(([label, desc]) => (
+                  <p key={label} className="leading-relaxed">
+                    <strong style={{ color: "var(--text)" }}>{label}</strong> {desc}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl p-6 sm:p-8" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-3 mb-4">
                 <FileText className="w-6 h-6 text-blue-600" />
                 <h2 className="text-2xl font-semibold" style={{ color: "var(--text)" }}>Gerador de Resumos</h2>
               </div>
@@ -138,6 +165,12 @@ export default function AboutPage() {
                 </button>
                 <button onClick={() => router.push("/resume")} className="bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-900 transition-colors">
                   Criar Resumo
+                </button>
+                <button
+                  onClick={() => router.push("/calendar")}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Ver Cronograma
                 </button>
               </div>
             </div>
