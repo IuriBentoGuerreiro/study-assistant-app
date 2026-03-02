@@ -1,4 +1,4 @@
-import AIResumeChat from "@/src/components/resume/resume";
+import AIResumeChat from "@/src/components/summary/summary";
 
 export default async function Page({
   params,
@@ -7,5 +7,5 @@ export default async function Page({
 }) {
   const { id } = await params;
 
-  return <AIResumeChat initialResumeId={id} />;
+  return <AIResumeChat initialSummaryId={id} />;
 }
