@@ -60,8 +60,8 @@ export default function Sidebar({
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Painel", path: "/dashboard" },
-    { icon: MessageSquare, label: "Simulados", path: "/chat" },
-    { icon: FileText, label: "Resumos", path: "/resume" },
+    { icon: MessageSquare, label: "Simulados", path: "/practice-tests" },
+    { icon: FileText, label: "Resumos", path: "/summaries" },
     { icon: CalendarIcon, label: "Cronograma", path: "/study-calendar" },
     { icon: Info, label: "Ajuda", path: "/about" },
     { icon: Mail, label: "Suporte", path: "mailto:brainlyai.services@gmail.com?subject=Suporte%20para%20BrainlyAi" }

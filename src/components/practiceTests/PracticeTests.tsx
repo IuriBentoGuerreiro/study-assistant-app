@@ -350,11 +350,11 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     setTopic("");
     setShowResultsModal(false);
     setSidebarOpen(false);
-    router.push("/chat", { scroll: false });
+    router.push("/practice-tests", { scroll: false });
   };
 
   const handleSessionSelect = (sessionId: string) => {
-    router.push(`/chat/${sessionId}`, { scroll: false });
+    router.push(`/practice-tests/${sessionId}`, { scroll: false });
     setShowResultsModal(false);
   };
 

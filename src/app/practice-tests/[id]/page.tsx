@@ -1,4 +1,4 @@
-import AIQuizChat from "@/src/components/AIQuizChat/chat";
+import AIQuizChat from "@/src/components/practiceTests/PracticeTests";
 
 export default async function Page({
   params,

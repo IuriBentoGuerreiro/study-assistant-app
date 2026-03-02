@@ -1,4 +1,4 @@
-import AIQuizChat from "@/src/components/AIQuizChat/chat";
+import AIQuizChat from "@/src/components/practiceTests/PracticeTests";
 import Resume from "@/src/components/summary/summary";
 import { Suspense } from "react";
 
