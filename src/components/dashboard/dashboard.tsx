@@ -37,7 +37,7 @@ export default function DashboardView() {
         const dashboardResponse = await api.get("/dashboard");
         setDashboard(dashboardResponse.data);
 
-        const resumesResponse = await api.get("/resume");
+        const resumesResponse = await api.get("summaries");
         setResumes(resumesResponse.data);
 
           const sessionsResponse = await api.get("/session");
