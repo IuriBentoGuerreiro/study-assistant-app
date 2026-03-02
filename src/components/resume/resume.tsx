@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, RotateCcw } from "lucide-react";
+import { CheckCircle2, Info, Loader2, RotateCcw, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "@/src/lib/api";
 import Tooltip from "../ui/Tooltip";
@@ -11,6 +11,7 @@ import rehypeSanitize from "rehype-sanitize";
 import Sidebar from "../ui/Sidebar";
 import Header from "../ui/Header";
 import { ContentLoader } from "../ui/ContentLoad";
+import { useToast } from "@/hooks/useToast";
 
 type ResumeListItem = {
   id: string;
@@ -40,6 +41,8 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
   const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
 
   const [isLoadingResume, setIsLoadingResume] = useState(false);
+  const { toasts, showToast, setToasts } = useToast();
+
 
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
       const { data } = await api.get<ResumeListItem[]>(`/resume`);
       setResumes(data);
     } catch (err) {
-      console.error("Erro ao carregar resumos", err);
+      showToast("Erro ao carregar resumos", "error");
     }
   };
 
@@ -100,8 +103,20 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
       setActiveResumeId(resumeId);
       setSidebarOpen(false);
     } catch (err) {
-      console.error("Erro ao carregar resumo", err);
+      showToast("Erro ao carregar resumo", "error");
     } finally {
+      setIsLoadingResume(false);
+    }
+  };
+
+  const deleteResume = async (resumeId: string) => {
+    try {
+      const { data } = await api.delete(`/resume/${resumeId}`);
+      showToast("Deletado com sucesso", "success");
+    } catch (err) {
+      showToast("Erro ao deletar resumo", "error");
+    } finally {
+      loadResumes()
       setIsLoadingResume(false);
     }
   };
@@ -134,6 +149,7 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
         newItemLabel="Novo resumo"
         newItemIcon={RotateCcw}
         showListSection={true}
+        onItemDelete={deleteResume}
       />
 
       <div className="flex-1 flex flex-col" style={{ background: "var(--bg)" }}>
@@ -237,6 +253,18 @@ export default function AIResumeChat({ initialResumeId }: ResumeProps) {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="fixed bottom-5 right-5 z-9999 flex flex-col gap-3">
+        {toasts.map((t) => (
+          <div key={t.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-white font-medium animate-in slide-in-from-right-full duration-300 ${t.type === "success" ? "bg-emerald-600" : t.type === "error" ? "bg-red-600" : "bg-blue-600"}`}>
+            {t.type === "success" && <CheckCircle2 size={18} />}
+            {t.type === "error" && <Trash size={18} />}
+            {t.type === "info" && <Info size={18} />}
+            <span>{t.message}</span>
+            <button onClick={() => setToasts((prev) => prev.filter((item) => item.id !== t.id))} className="ml-2 hover:opacity-70 transition-opacity">&times;</button>
+          </div>
+        ))}
       </div>
     </div>
   );

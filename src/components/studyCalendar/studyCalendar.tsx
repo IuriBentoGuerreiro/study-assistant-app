@@ -216,7 +216,7 @@ export default function StudyCalendar() {
     try {
       await api.delete(`/study-day/${sessionId}`);
       setSessionsOfSelectedDate((prev) => prev.filter((s) => s.id !== sessionId));
-      await loadStudySessions(); showToast("Sessão excluída com sucesso.", "success");
+      await loadStudySessions();
     } catch { showToast("Não foi possível excluir a sessão.", "error"); }
     finally { setIsDeleteModalOpen(false); setSessionToDelete(null); }
   };
@@ -276,7 +276,6 @@ export default function StudyCalendar() {
 
     } catch (error) {
       showToast("Erro ao atualizar sessão", "error");
-      console.error(error);
     }
   };
 
@@ -311,7 +310,7 @@ export default function StudyCalendar() {
         else { setIsPaused(false); setActivePauseId(null); pauseStartTimeRef.current = null; }
         setElapsedSeconds(calculateElapsedSeconds(data.startTime, data.totalPausedSeconds, data.activePause?.startTime));
       }
-    } catch (error) { console.error("Erro ao carregar sessão ativa", error); }
+    } catch (error) { showToast("Erro ao carregar sessão ativa", "error"); }
   };
 
   const createStudyDay = async (desc: string) => {

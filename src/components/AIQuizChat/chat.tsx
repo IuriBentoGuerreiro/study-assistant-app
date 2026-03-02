@@ -332,11 +332,12 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const handleDelete = async (sessionId: string) => {
     try {
       await api.delete(`/session/${sessionId}`);
+      showToast("Deletado com sucesso:", "success");
+
       removeSession(sessionId);
       if (sessionId === activeSessionId) {
         setCurrentSession(null);
         setActiveSessionId(null);
-        router.push("/chat", { scroll: false });
       }
     } catch (err) {
       showToast("Erro ao deletar sessão:", "error");
