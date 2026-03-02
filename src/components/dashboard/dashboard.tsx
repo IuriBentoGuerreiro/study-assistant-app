@@ -125,7 +125,7 @@ export default function DashboardView() {
                       {sessions.map((session) => (
                         <div
                           key={session.id}
-                          onClick={() => router.push(`/chat/${session.id}`)}
+                          onClick={() => router.push(`/practice-tests/${session.id}`)}
                           className="flex items-center justify-between p-4 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
                         >
                           <div className="flex items-center">
@@ -165,7 +165,7 @@ export default function DashboardView() {
                       {resumes.map((resume) => (
                         <div
                           key={resume.id}
-                          onClick={() => router.push(`/resume/${resume.id}`)}
+                          onClick={() => router.push(`/summaries/${resume.id}`)}
                           className="flex items-center justify-between p-4 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
                         >
                           <div className="flex items-center">
