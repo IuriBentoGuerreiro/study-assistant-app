@@ -12,6 +12,7 @@ import {
   FileText,
   CalendarIcon,
   Info,
+  Mail,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import ConfirmationModal from "./ConfirmationModal";
@@ -63,6 +64,7 @@ export default function Sidebar({
     { icon: FileText, label: "Resumos", path: "/resume" },
     { icon: CalendarIcon, label: "Cronograma", path: "/study-calendar" },
     { icon: Info, label: "Ajuda", path: "/about" },
+    { icon: Mail, label: "Suporte", path: "mailto:brainlyai.services@gmail.com?subject=Suporte%20para%20BrainlyAi" }
   ];
 
   return (
