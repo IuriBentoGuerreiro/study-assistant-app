@@ -160,10 +160,10 @@ export default function AboutPage() {
               <h2 className="text-2xl font-bold mb-3">Pronto para otimizar seus estudos?</h2>
               <p className="mb-6 text-blue-100">Comece agora a usar o BrainlyAI e transforme sua forma de estudar.</p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button onClick={() => router.push("/chat")} className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
+                <button onClick={() => router.push("/practice-tests")} className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
                   Gerar Questões
                 </button>
-                <button onClick={() => router.push("/resume")} className="bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-900 transition-colors">
+                <button onClick={() => router.push("/summaries")} className="bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-900 transition-colors">
                   Criar Resumo
                 </button>
                 <button

@@ -284,7 +284,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
       addSession({ id: data.id, sessionName: topic, createdAt: new Date().toISOString() });
 
-      router.push(`/chat/${data.id}`, { scroll: false });
+      router.push(`/practice-tests/${data.id}`, { scroll: false });
 
       setTopic("");
       setQuantity("");
