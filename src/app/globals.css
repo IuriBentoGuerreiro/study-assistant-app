@@ -5,6 +5,16 @@
 @import "tailwindcss";
 
 :root {
+
+  --md-heading: var(--text-active);
+  --md-paragraph: var(--text);
+  --md-muted: var(--text-muted);
+  --md-code-bg: var(--bg-subtle);
+  --md-code-text: var(--text-active);
+  --md-quote-border: var(--border-active);
+  --md-quote-text: var(--text-muted);
+  --md-mark-bg: #fef08a;
+
   --bg: #ffffff;
   --bg-subtle: #f9fafb;
   --bg-card: #ffffff;
@@ -26,6 +36,16 @@
 }
 
 .dark {
+  
+  --md-heading: var(--text-active);
+  --md-paragraph: var(--text);
+  --md-muted: var(--text-muted);
+  --md-code-bg: var(--bg-hover);
+  --md-code-text: var(--text-active);
+  --md-quote-border: var(--border-active);
+  --md-quote-text: var(--text-muted);
+  --md-mark-bg: #854d0e;
+
   --bg: #09090b;
   --bg-subtle: #18181b;
   --bg-card: #18181b;

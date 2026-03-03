@@ -251,11 +251,84 @@ export default function AISummaryChat({ initialSummaryId }: SummaryProps) {
                     </div>
 
                     <article className="prose prose-blue max-w-none">
-                      <ReactMarkdown
-                        rehypePlugins={[rehypeRaw, rehypeSanitize]}
-                      >
-                        {summary.text}
-                      </ReactMarkdown>
+                      {summary && (
+                        <div className="p-6 rounded-2xl bg-(--bg-card) border border-(--border)">
+                          <ReactMarkdown
+                            rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                            components={{
+                              h1: ({ node, ...props }) => (
+                                <h1
+                                  className="text-3xl font-bold mt-8 mb-4 text-(--md-heading)"
+                                  {...props}
+                                />
+                              ),
+                              h2: ({ node, ...props }) => (
+                                <h2
+                                  className="text-2xl font-semibold mt-6 mb-3 text-(--md-heading)"
+                                  {...props}
+                                />
+                              ),
+                              h3: ({ node, ...props }) => (
+                                <h3
+                                  className="text-xl font-semibold mt-5 mb-2 text-(--md-heading)"
+                                  {...props}
+                                />
+                              ),
+                              p: ({ node, ...props }) => (
+                                <p
+                                  className="leading-7 mb-4 text-(--md-paragraph)"
+                                  {...props}
+                                />
+                              ),
+                              ul: ({ node, ...props }) => (
+                                <ul
+                                  className="list-disc ml-6 mb-4 space-y-2 text-(--md-paragraph)"
+                                  {...props}
+                                />
+                              ),
+                              li: ({ node, ...props }) => (
+                                <li
+                                  className="marker:text-(--md-muted)"
+                                  {...props}
+                                />
+                              ),
+                              strong: ({ node, ...props }) => (
+                                <strong
+                                  className="font-semibold text-(--md-paragraph)"
+                                  {...props}
+                                />
+                              ),
+                              mark: ({ node, ...props }) => (
+                                <mark
+                                  className="px-1.5 py-0.5 rounded bg-(--md-mark-bg) text-(--md-paragraph)"
+                                  {...props}
+                                />
+                              ),
+                              code: ({ node, inline, ...props }: any) =>
+                                inline ? (
+                                  <code
+                                    className="px-1.5 py-0.5 rounded text-sm bg-(--md-code-bg) text-(--md-code-text)"
+                                    {...props}
+                                  />
+                                ) : (
+                                  <code
+                                    className="block p-4 rounded-xl text-sm bg-(--md-code-bg) text-(--md-code-text) overflow-x-auto"
+                                    {...props}
+                                  />
+                                ),
+                              blockquote: ({ node, ...props }) => (
+                                <blockquote
+                                  className="border-l-4 pl-4 italic my-6 border-(--md-quote-border) text-(--md-quote-text)"
+                                  {...props}
+                                />
+                              ),
+                            }}
+                          >
+                            {summary.text}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+
                     </article>
                   </div>
                 )}
@@ -269,13 +342,12 @@ export default function AISummaryChat({ initialSummaryId }: SummaryProps) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-white font-medium ${
-              t.type === "success"
-                ? "bg-emerald-600"
-                : t.type === "error"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-white font-medium ${t.type === "success"
+              ? "bg-emerald-600"
+              : t.type === "error"
                 ? "bg-red-600"
                 : "bg-blue-600"
-            }`}
+              }`}
           >
             {t.type === "success" && <CheckCircle2 size={18} />}
             {t.type === "error" && <Trash size={18} />}
