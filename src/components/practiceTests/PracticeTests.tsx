@@ -19,57 +19,12 @@ import Sidebar from "../ui/Sidebar";
 import Header from "../ui/Header";
 import { useToast } from "@/hooks/useToast";
 import { QuestionCard } from "../ui/QuestionCard";
-import { QuestionType } from "@/src/types/Question";
 import { ResultsModal } from "../ui/ResultsModal";
 import { LabeledField } from "../ui/LabeledField";
 import { ScoreLine } from "../ui/ScoreLine";
 import { ContentLoader } from "../ui/ContentLoad";
-
-
-type ApiQuestion = {
-  id: string;
-  statement: string;
-  type: keyof typeof QuestionType;
-  correctAnswerIndex: number;
-  studyAnswer?: number | null;
-  options: string[];
-};
-
-type QuestionDTO = {
-  id: string;
-  type: keyof typeof QuestionType;
-  statement: string;
-  correctAnswerIndex: number;
-  studyAnswer?: number | null;
-  options?: string[];
-};
-
-type Question = {
-  id: string;
-  type: QuestionType;
-  statement: string;
-  options?: string[];
-  userAnswerIndex?: number;
-  correctAnswerIndex: number;
-};
-
-type Session = {
-  id: string;
-  sessionName?: string;
-  topic: string;
-  questions: Question[];
-  completed: boolean;
-};
-
-type SessionListItem = {
-  id: string;
-  sessionName: string;
-  createdAt: string;
-};
-
-type ApiFullSession = SessionListItem & {
-  questions: ApiQuestion[];
-};
+import { Question, QuestionResponse, QuestionType } from "@/src/types/Question";
+import { StudySession, StudySessionNameDTO, StudySessionResponseDTO } from "@/src/types/Session";
 
 const QUESTION_TYPE_OPTIONS = [
   { label: "Múltipla escolha", value: "MULTIPLE_CHOICE" },
@@ -104,12 +59,6 @@ const CARGO_OPTIONS = [
 
 const NIVEL_OPTIONS = ["Médio", "Superior"];
 
-function parseQuestionType(type: string): QuestionType {
-  if (type === "MULTIPLE_CHOICE") return QuestionType.MULTIPLE_CHOICE;
-  if (type === "TRUE_FALSE") return QuestionType.TRUE_FALSE;
-  throw new Error(`Tipo de questão inválido: ${type}`);
-}
-
 function normalizeStudyAnswer(value?: number | null): number | undefined {
   return value === null || value === undefined ? undefined : value;
 }
@@ -139,7 +88,7 @@ type AIQuizChatProps = {
 export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const router = useRouter();
 
-  const [topic, setTopic] = useState("");
+  const [prompt, setPrompt] = useState("");
   const [quantity, setQuantity] = useState("");
   const [banca, setBanca] = useState("");
   const [cargo, setCargo] = useState("");
@@ -157,8 +106,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const [currentSession, setCurrentSession] = useState<Session | null>(null);
-  const [sessions, setSessions] = useState<SessionListItem[]>([]);
+  const [currentSession, setCurrentSession] = useState<StudySession | null>(null)
+  const [sessions, setSessions] = useState<StudySessionNameDTO[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -167,13 +116,12 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
 
   const totalQuestions = currentSession?.questions.length ?? 0;
-  const answeredQuestions = currentSession?.questions.filter(q => q.userAnswerIndex !== undefined).length ?? 0;
-  const correctAnswers = currentSession?.questions.filter(q => q.userAnswerIndex === q.correctAnswerIndex).length ?? 0;
+  const answeredQuestions = currentSession?.questions.filter(q => q.studyAnswer !== undefined).length ?? 0;
+  const correctAnswers = currentSession?.questions.filter(q => q.studyAnswer === q.correctAnswerIndex).length ?? 0;
   const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
   const sessionName = useMemo(() => {
     if (currentSession?.sessionName) return currentSession.sessionName;
-    if (currentSession?.topic) return currentSession.topic;
 
     return sessions.find(s => s.id === activeSessionId)?.sessionName ?? "Sessão";
   }, [sessions, activeSessionId, currentSession]);
@@ -194,14 +142,14 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
   const loadSessions = async () => {
     try {
-      const { data } = await api.get<SessionListItem[]>("/session");
+      const { data } = await api.get<StudySessionNameDTO[]>("/session");
       setSessions(data);
     } catch (err) {
       showToast("Erro ao carregar sessões:", "error");
     }
   };
 
-  const addSession = (session: SessionListItem) => {
+  const addSession = (session: StudySessionNameDTO) => {
     setSessions(prev => [session, ...prev]);
   };
 
@@ -212,27 +160,32 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const loadFullSession = async (sessionId: string) => {
     try {
       setIsLoadingSession(true);
-      const { data } = await api.get<ApiFullSession>(`/session/${sessionId}/full`);
 
-      const questions: Question[] = data.questions.map(q => ({
+      const { data } = await api.get<StudySessionResponseDTO>(
+        `/session/${sessionId}/full`
+      );
+
+      const questions: Question[] = data.questions.map((q: QuestionResponse) => ({
         id: q.id,
-        type: parseQuestionType(q.type),
+        type: q.type,
         statement: q.statement,
         options: q.options ?? [],
         correctAnswerIndex: q.correctAnswerIndex,
-        userAnswerIndex: normalizeStudyAnswer(q.studyAnswer),
+        studyAnswer: normalizeStudyAnswer(q.studyAnswer),
+        comment: q.comment
       }));
 
       setActiveSessionId(sessionId);
+
       setCurrentSession({
         id: sessionId,
-        topic: data.sessionName,
         sessionName: data.sessionName,
         questions,
-        completed: questions.every(q => q.userAnswerIndex !== undefined),
+        completed: questions.every(q => q.studyAnswer !== undefined)
       });
+
       setSidebarOpen(false);
-    } catch (err) {
+    } catch {
       showToast("Erro ao carregar sessão completa:", "error");
     } finally {
       setIsLoadingSession(false);
@@ -240,7 +193,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   };
 
   const generateQuestions = async () => {
-    if (!topic.trim()) return;
+    if (!prompt.trim()) return;
 
     if (Number(quantity) > 50) {
       setErrorMessage("O limite máximo de questões é 50");
@@ -250,11 +203,9 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
     setErrorMessage(null);
     setIsGenerating(true);
 
-    const userId = Number(sessionStorage.getItem("userId"));
-
     try {
       const payload = {
-        prompt: topic,
+        prompt,
         quantidade: Number(quantity),
         type: questionType,
         banca: banca || undefined,
@@ -265,28 +216,36 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
         nivel: nivel || undefined,
       };
 
-      const { data } = await api.post("/session/generateIa", payload, {
-        params: { userId },
-        headers: { "Content-Type": "application/json" },
-      });
+      const { data } = await api.post("/session/generateIa", payload);
 
-      const questions: Question[] = data.questions.map((q: QuestionDTO) => ({
+      const questions: Question[] = data.questions.map((q: QuestionResponse) => ({
         id: q.id,
-        type: QuestionType[q.type],
+        type: q.type,
         statement: q.statement,
         options: q.options ?? [],
         correctAnswerIndex: q.correctAnswerIndex,
-        userAnswerIndex: normalizeStudyAnswer(q.studyAnswer),
+        studyAnswer: normalizeStudyAnswer(q.studyAnswer),
+        comment: q.comment
       }));
 
       setActiveSessionId(data.id);
-      setCurrentSession({ id: data.id, topic, questions, completed: false });
 
-      addSession({ id: data.id, sessionName: topic, createdAt: new Date().toISOString() });
+      setCurrentSession({
+        id: data.id,
+        sessionName: prompt,
+        questions,
+        completed: false
+      });
+
+      addSession({
+        id: data.id,
+        sessionName: prompt,
+        createdAt: new Date().toISOString()
+      });
 
       router.push(`/practice-tests/${data.id}`, { scroll: false });
 
-      setTopic("");
+      setPrompt("");
       setQuantity("");
       setBanca("");
       setCargo("");
@@ -296,34 +255,35 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       setEstado("");
       setQuestionType(null);
       setSidebarOpen(false);
+
     } catch (error: any) {
       const status = error.response?.status;
       const message =
         error.response?.data?.message ||
         error.response?.data ||
         "Erro inesperado ao gerar questões";
-      showToast(status === 400 ? message : "Erro inesperado. Tente novamente.", "error");
+
+      showToast(
+        status === 400 ? message : "Erro inesperado. Tente novamente.",
+        "error"
+      );
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleAnswer = async (questionId: string, optionIndex: number) => {
+  const handleAnswer = async (questionId: string, selectedOptionIndex: number) => {
     if (!currentSession) return;
 
-    await api.put("/question/user/response", { questionId, selectedOptionIndex: optionIndex });
+    await api.put("/question/user/response", { questionId, selectedOptionIndex: selectedOptionIndex });
 
     setCurrentSession(prev => {
       if (!prev) return prev;
 
       const updatedQuestions = prev.questions.map(q =>
-        q.id === questionId ? { ...q, userAnswerIndex: optionIndex } : q,
+        q.id === questionId ? { ...q, studyAnswer: selectedOptionIndex } : q,
       );
-      const isNowCompleted = updatedQuestions.every(q => q.userAnswerIndex !== undefined);
-
-      if (isNowCompleted && !prev.completed) {
-        setTimeout(() => setShowResultsModal(true), 500);
-      }
+      const isNowCompleted = updatedQuestions.every(q => q.correctAnswerIndex !== undefined);
 
       return { ...prev, questions: updatedQuestions, completed: isNowCompleted };
     });
@@ -347,7 +307,7 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const resetQuiz = () => {
     setCurrentSession(null);
     setActiveSessionId(null);
-    setTopic("");
+    setPrompt("");
     setShowResultsModal(false);
     setSidebarOpen(false);
     router.push("/practice-tests", { scroll: false });
@@ -439,8 +399,8 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
                   <LabeledField label="Tema" tooltip="Assunto ou conteúdo de PDF">
                     <textarea
-                      value={topic}
-                      onChange={e => setTopic(e.target.value)}
+                      value={prompt}
+                      onChange={e => setPrompt(e.target.value)}
                       placeholder="Digite um tema para gerar questões..."
                       className="rounded-lg px-4 py-3 w-full min-h-30 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
                       style={{ border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text)" }}
