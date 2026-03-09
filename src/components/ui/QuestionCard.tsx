@@ -72,13 +72,17 @@ export function QuestionCard({
         border: `2px solid ${isAnswered ? (isCorrect ? "#bbf7d0" : "#fecaca") : "var(--border)"}`,
       }}
     >
+      
       <div className="flex items-start justify-between">
-        <h3 className="font-semibold text-sm sm:text-base flex-1" style={{ color: "var(--text)" }}>
-          <span className="inline-flex items-center justify-center min-w-7 h-7 bg-blue-100 text-blue-700 rounded-full text-sm font-bold mr-3">
+        <div className="flex items-start flex-1">
+          <span className="inline-flex items-center justify-center min-w-7 h-7 bg-blue-100 text-blue-700 rounded-full text-sm font-bold mr-3 mt-0.5 shrink-0">
             {index + 1}
           </span>
-          {q.statement}
-        </h3>
+          <div className="text-sm sm:text-base font-semibold prose prose-sm max-w-none" style={{ color: "var(--text)" }}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{q.statement}</ReactMarkdown>
+          </div>
+        </div>
+
         {isAnswered && (
           <div className="ml-3 shrink-0">
             {isCorrect
