@@ -7,11 +7,19 @@ import remarkGfm from "remark-gfm";
 function getOptionStyle(
   answered: boolean,
   isCorrect: boolean,
-  isSelected: boolean
-):
-
-  React.CSSProperties {
+  isSelected: boolean,
+  isPending: boolean
+): React.CSSProperties {
   if (!answered) {
+    if (isPending) {
+      return {
+        border: "2px solid var(--border-active)",
+        background: "var(--bg-active)",
+        color: "var(--text)",
+        cursor: "pointer",
+        boxShadow: "0 0 0 3px color-mix(in srgb, var(--text-active) 15%, transparent)",
+      };
+    }
     return {
       border: "2px solid var(--border)",
       background: "var(--bg-card)",
@@ -46,6 +54,7 @@ function getOptionStyle(
     cursor: "default",
   };
 }
+
 export function QuestionCard({
   question: q,
   index,
@@ -55,40 +64,58 @@ export function QuestionCard({
   index: number;
   onAnswer: (id: string, index: number) => void;
 }) {
-
   console.log(`Questão ${index + 1}:`, q);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingAnswer, setPendingAnswer] = useState<number | null>(null);
 
   const isAnswered = q.studyAnswer !== undefined && q.studyAnswer !== null;
   const isComment = q.comment !== undefined && q.comment !== null;
   const isCorrect = q.studyAnswer === q.correctAnswerIndex;
-  const options = q.type === QuestionType.TRUE_FALSE ? ["Certo", "Errado"] : (q.options ?? []);
+  const options =
+    q.type === QuestionType.TRUE_FALSE
+      ? ["Certo", "Errado"]
+      : (q.options ?? []);
+
+  function handleConfirm() {
+    if (pendingAnswer !== null) {
+      onAnswer(q.id, pendingAnswer);
+      setPendingAnswer(null);
+    }
+  }
 
   return (
     <div
       className="p-4 sm:p-5 rounded-xl shadow-sm transition-all duration-300 flex flex-col gap-4"
       style={{
         background: "var(--bg-card)",
-        border: `2px solid ${isAnswered ? (isCorrect ? "#bbf7d0" : "#fecaca") : "var(--border)"}`,
+        border: `2px solid ${isAnswered
+            ? isCorrect
+              ? "#bbf7d0"
+              : "#fecaca"
+            : "var(--border)"
+          }`,
       }}
     >
-      
       <div className="flex items-start justify-between">
         <div className="flex items-start flex-1">
           <span className="inline-flex items-center justify-center min-w-7 h-7 bg-blue-100 text-blue-700 rounded-full text-sm font-bold mr-3 mt-0.5 shrink-0">
             {index + 1}
           </span>
-          <div className="text-sm sm:text-base font-semibold prose prose-sm max-w-none" style={{ color: "var(--text)" }}>
+          <div
+            className="text-sm sm:text-base font-semibold prose prose-sm max-w-none"
+            style={{ color: "var(--text)" }}
+          >
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{q.statement}</ReactMarkdown>
           </div>
         </div>
 
         {isAnswered && (
           <div className="ml-3 shrink-0">
-            {isCorrect
-              ? <CheckCircle2 className="w-6 h-6 text-green-500" />
-              : <XCircle className="w-6 h-6 text-red-500" />
-            }
+            {isCorrect ? (
+              <CheckCircle2 className="w-6 h-6 text-green-500" />
+            ) : (
+              <XCircle className="w-6 h-6 text-red-500" />
+            )}
           </div>
         )}
       </div>
@@ -97,23 +124,48 @@ export function QuestionCard({
         {options.map((opt, i) => {
           const optCorrect = i === q.correctAnswerIndex;
           const isSelected = i === q.studyAnswer;
-          const style = getOptionStyle(isAnswered, optCorrect, isSelected);
+          const isPending = !isAnswered && i === pendingAnswer;
+          const style = getOptionStyle(isAnswered, optCorrect, isSelected, isPending);
 
           return (
             <button
               key={i}
               disabled={isAnswered}
-              onClick={() => onAnswer(q.id, i)}
+              onClick={() => !isAnswered && setPendingAnswer(i)}
               className="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 hover:shadow-md"
               style={style}
             >
               <span className="flex-1">{opt}</span>
-              {isAnswered && optCorrect && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
-              {isAnswered && isSelected && !optCorrect && <XCircle className="w-5 h-5 text-red-600 shrink-0" />}
+
+              {isAnswered && optCorrect && (
+                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+              )}
+              {isAnswered && isSelected && !optCorrect && (
+                <XCircle className="w-5 h-5 text-red-600 shrink-0" />
+              )}
             </button>
           );
         })}
       </div>
+
+      {!isAnswered && (
+        <div className="flex justify-end pt-1">
+          <button
+            onClick={handleConfirm}
+            disabled={pendingAnswer === null}
+            className="flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-full transition-all active:scale-95"
+            style={{
+              background: pendingAnswer !== null ? "var(--button-blue)" : "var(--text)",
+              color: pendingAnswer !== null ? "#fff" : "var(--text-muted)",
+              cursor: pendingAnswer !== null ? "pointer" : "not-allowed",
+              opacity: pendingAnswer !== null ? 1 : 0.5,
+            }}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Responder
+          </button>
+        </div>
+      )}
 
       <div className="flex justify-end pt-2">
         {isAnswered && isComment ? (
@@ -124,21 +176,17 @@ export function QuestionCard({
             <CheckCircle className="w-4 h-4" />
             Ver Explicação Detalhada
           </button>
-        ) : (
-          <button
-            className="cursor-not-allowed flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-all active:scale-95"
-          >
+        ) : isAnswered ? (
+          <button className="cursor-not-allowed flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-all active:scale-95">
             <Lock className="w-4 h-4" />
             Responda Para Ver a Explicação
           </button>
-        )}
+        ) : null}
       </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-
           <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border dark:border-slate-800 animate-in zoom-in-95 duration-200">
-
             <div className="flex items-center justify-between p-4 border-b dark:border-slate-800 bg-emerald-50/50 dark:bg-emerald-500/5">
               <h3 className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5" />
@@ -154,23 +202,25 @@ export function QuestionCard({
 
             <div className="p-6 max-h-[70vh] overflow-y-auto">
               <div className="space-y-4 text-slate-700 dark:text-slate-300 leading-relaxed">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {q.comment}
-                </ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{q.comment}</ReactMarkdown>
               </div>
             </div>
 
             <div className="p-4 border-t dark:border-slate-800 flex justify-end">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors"
+                className="px-6 py-2 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors"
+                style={{ background: "var(--button-blue)" }}
               >
                 Entendi
               </button>
             </div>
           </div>
 
-          <div className="absolute inset-0 -z-10" onClick={() => setIsModalOpen(false)}></div>
+          <div
+            className="absolute inset-0 -z-10"
+            onClick={() => setIsModalOpen(false)}
+          ></div>
         </div>
       )}
     </div>
