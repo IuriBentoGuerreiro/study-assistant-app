@@ -150,7 +150,7 @@ export default function AISummaryChat({ initialSummaryId }: SummaryProps) {
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        subtitle="Summary Generator"
+        subtitle="Gerador de Resumos"
         listItems={summaries}
         activeItemId={activeSummaryId}
         onItemSelect={handleSummarySelect}
@@ -164,7 +164,7 @@ export default function AISummaryChat({ initialSummaryId }: SummaryProps) {
       <div className="flex-1 flex flex-col">
         <Header
           onMenuClick={() => setSidebarOpen(true)}
-          title="Summaries"
+          title="Resumos"
         />
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -219,7 +219,7 @@ export default function AISummaryChat({ initialSummaryId }: SummaryProps) {
                       {isGenerating ? (
                         <>
                           <Loader2 className="animate-spin w-5 h-5" />
-                          Generating...
+                          Gerando...
                         </>
                       ) : (
                         "Gerar Resumos"
