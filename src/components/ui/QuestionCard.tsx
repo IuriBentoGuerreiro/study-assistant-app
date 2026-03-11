@@ -1,16 +1,30 @@
 import { Question, QuestionType } from "@/src/types/Question";
-import { CheckCircle, CheckCircle2, Lock, X, XCircle } from "lucide-react";
+import { CheckCircle, CheckCircle2, Lock, Scissors, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-function getOptionStyle(
-  answered: boolean,
-  isCorrect: boolean,
-  isSelected: boolean,
-  isPending: boolean
-): React.CSSProperties {
+function getOptionStyle(params: {
+  answered: boolean;
+  isCorrect: boolean;
+  isSelected: boolean;
+  isPending: boolean;
+  isEliminated: boolean;
+}): React.CSSProperties {
+  const { answered, isCorrect, isSelected, isPending, isEliminated } = params;
+
   if (!answered) {
+    if (isEliminated) {
+      return {
+        border: "2px dashed var(--border)",
+        background: "var(--bg-subtle)",
+        color: "var(--text-muted)",
+        textDecoration: "line-through",
+        opacity: 0.45,
+        cursor: "pointer",
+      };
+    }
+
     if (isPending) {
       return {
         border: "2px solid var(--border-active)",
@@ -20,6 +34,7 @@ function getOptionStyle(
         boxShadow: "0 0 0 3px color-mix(in srgb, var(--text-active) 15%, transparent)",
       };
     }
+
     return {
       border: "2px solid var(--border)",
       background: "var(--bg-card)",
@@ -64,17 +79,16 @@ export function QuestionCard({
   index: number;
   onAnswer: (id: string, index: number) => void;
 }) {
-  console.log(`Questão ${index + 1}:`, q);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingAnswer, setPendingAnswer] = useState<number | null>(null);
+  const [eliminatedOptions, setEliminatedOptions] = useState<number[]>([]);
 
   const isAnswered = q.studyAnswer !== undefined && q.studyAnswer !== null;
-  const isComment = q.comment !== undefined && q.comment !== null;
   const isCorrect = q.studyAnswer === q.correctAnswerIndex;
+  const hasComment = q.comment !== undefined && q.comment !== null;
+
   const options =
-    q.type === QuestionType.TRUE_FALSE
-      ? ["Certo", "Errado"]
-      : (q.options ?? []);
+    q.type === QuestionType.TRUE_FALSE ? ["Certo", "Errado"] : (q.options ?? []);
 
   function handleConfirm() {
     if (pendingAnswer !== null) {
@@ -83,16 +97,22 @@ export function QuestionCard({
     }
   }
 
+  function toggleEliminate(optionIndex: number) {
+    if (isAnswered) return;
+    setEliminatedOptions((prev) =>
+      prev.includes(optionIndex)
+        ? prev.filter((i) => i !== optionIndex)
+        : [...prev, optionIndex]
+    );
+    if (pendingAnswer === optionIndex) setPendingAnswer(null);
+  }
+
   return (
     <div
       className="p-4 sm:p-5 rounded-xl shadow-sm transition-all duration-300 flex flex-col gap-4"
       style={{
         background: "var(--bg-card)",
-        border: `2px solid ${isAnswered
-            ? isCorrect
-              ? "#bbf7d0"
-              : "#fecaca"
-            : "var(--border)"
+        border: `2px solid ${isAnswered ? (isCorrect ? "#bbf7d0" : "#fecaca") : "var(--border)"
           }`,
       }}
     >
@@ -122,28 +142,58 @@ export function QuestionCard({
 
       <div className="space-y-2">
         {options.map((opt, i) => {
-          const optCorrect = i === q.correctAnswerIndex;
-          const isSelected = i === q.studyAnswer;
-          const isPending = !isAnswered && i === pendingAnswer;
-          const style = getOptionStyle(isAnswered, optCorrect, isSelected, isPending);
+          const isEliminated = eliminatedOptions.includes(i);
+
+          const style = getOptionStyle({
+            answered: isAnswered,
+            isCorrect: i === q.correctAnswerIndex,
+            isSelected: i === q.studyAnswer,
+            isPending: !isAnswered && i === pendingAnswer,
+            isEliminated,
+          });
 
           return (
-            <button
-              key={i}
-              disabled={isAnswered}
-              onClick={() => !isAnswered && setPendingAnswer(i)}
-              className="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 hover:shadow-md"
-              style={style}
-            >
-              <span className="flex-1">{opt}</span>
+            <div key={i} className="flex items-center gap-2">
+              {!isAnswered && (
+                <button
+                  onClick={() => toggleEliminate(i)}
+                  title={isEliminated ? "Desfazer eliminação" : "Eliminar alternativa"}
+                  className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer border active:scale-90"
+                  style={{
+                    background: isEliminated ? "rgba(239,68,68,0.12)" : "transparent",
+                    borderColor: isEliminated ? "rgba(239,68,68,0.4)" : "var(--border)",
+                    color: isEliminated ? "#ef4444" : "var(--text-muted)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isEliminated) {
+                      e.currentTarget.style.background = "rgba(0,0,0,0.06)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isEliminated) {
+                      e.currentTarget.style.background = "transparent";
+                    }
+                  }}
+                >
+                  <Scissors className="w-4 h-4" />
+                </button>
+              )}
 
-              {isAnswered && optCorrect && (
-                <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-              )}
-              {isAnswered && isSelected && !optCorrect && (
-                <XCircle className="w-5 h-5 text-red-600 shrink-0" />
-              )}
-            </button>
+              <button
+                disabled={isAnswered}
+                onClick={() => !isAnswered && !isEliminated && setPendingAnswer(i)}
+                className="flex-1 text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 hover:shadow-md"
+                style={style}
+              >
+                <span className="flex-1">{opt}</span>
+                {isAnswered && i === q.correctAnswerIndex && (
+                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+                )}
+                {isAnswered && i === q.studyAnswer && i !== q.correctAnswerIndex && (
+                  <XCircle className="w-5 h-5 text-red-600 shrink-0" />
+                )}
+              </button>
+            </div>
           );
         })}
       </div>
@@ -167,22 +217,27 @@ export function QuestionCard({
         </div>
       )}
 
-      <div className="flex justify-end pt-2">
-        {isAnswered && isComment ? (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="cursor-pointer flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95"
-          >
-            <CheckCircle className="w-4 h-4" />
-            Ver Explicação Detalhada
-          </button>
-        ) : isAnswered ? (
-          <button className="cursor-not-allowed flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-all active:scale-95">
-            <Lock className="w-4 h-4" />
-            Responda Para Ver a Explicação
-          </button>
-        ) : null}
-      </div>
+      {isAnswered && (
+        <div className="flex justify-end pt-2">
+          {hasComment ? (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="cursor-pointer flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Ver Explicação Detalhada
+            </button>
+          ) : (
+            <button
+              disabled
+              className="cursor-not-allowed flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-gray-300/40 bg-gray-100/40 text-gray-400 dark:text-gray-500"
+            >
+              <Lock className="w-4 h-4" />
+              Sem Explicação Disponível
+            </button>
+          )}
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -217,10 +272,7 @@ export function QuestionCard({
             </div>
           </div>
 
-          <div
-            className="absolute inset-0 -z-10"
-            onClick={() => setIsModalOpen(false)}
-          ></div>
+          <div className="absolute inset-0 -z-10" onClick={() => setIsModalOpen(false)} />
         </div>
       )}
     </div>
