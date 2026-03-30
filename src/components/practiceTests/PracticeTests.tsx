@@ -23,41 +23,12 @@ import { ResultsModal } from "../ui/ResultsModal";
 import { LabeledField } from "../ui/LabeledField";
 import { ScoreLine } from "../ui/ScoreLine";
 import { ContentLoader } from "../ui/ContentLoad";
-import { Question, QuestionResponse, QuestionType } from "@/src/types/Question";
+import { Question, QuestionResponse } from "@/src/types/Question";
 import { StudySession, StudySessionNameDTO, StudySessionResponseDTO } from "@/src/types/Session";
-
-const QUESTION_TYPE_OPTIONS = [
-  { label: "Múltipla escolha", value: "MULTIPLE_CHOICE" },
-  { label: "Certo / Errado", value: "TRUE_FALSE" },
-];
 
 const QUANTITY_OPTIONS = ["5", "10", "15", "20", "25", "30", "35", "40", "45", "50"];
 
-const BANCA_OPTIONS = [
-  "Cespe/CEBRASPE", "Consulpam", "FGV", "FCC", "Vunesp",
-  "IBFC", "FUNCAB", "AOCP", "Quadrix",
-];
-
-const ORGAO_OPTIONS = [
-  "INSS", "Receita Federal do Brasil (RFB)", "Polícia Federal (PF)",
-  "Polícia Rodoviária Federal (PRF)", "ABIN", "BACEN", "CGU", "TCU",
-  "STF", "STJ", "TSE", "TST", "CNJ", "MPU", "DPU", "AGU",
-  "Ministério da Fazenda", "Ministério da Justiça", "IBGE", "ANVISA",
-  "ANATEL", "ANEEL", "ANP", "Caixa Econômica Federal", "Banco do Brasil",
-  "Correios", "Universidades Federais", "Institutos Federais",
-];
-
-const CARGO_OPTIONS = [
-  "Analista Administrativo", "Técnico Administrativo", "Assistente Administrativo",
-  "Agente Administrativo", "Auxiliar Administrativo", "Analista do Seguro Social",
-  "Técnico do Seguro Social", "Auditor-Fiscal", "Analista Tributário",
-  "Analista Judiciário", "Técnico Judiciário", "Oficial de Justiça",
-  "Analista de TI", "Técnico de TI", "Agente de Polícia Federal",
-  "Delegado de Polícia Federal", "Perito Criminal Federal",
-  "Policial Rodoviário Federal", "Professor", "Escriturário", "Analista Bancário",
-];
-
-const NIVEL_OPTIONS = ["Médio", "Superior"];
+const NIVEL_OPTIONS = ["Fácil", "Médio", "Difícil"];
 
 function normalizeStudyAnswer(value?: number | null): number | undefined {
   return value === null || value === undefined ? undefined : value;
@@ -96,7 +67,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
   const [nivel, setNivel] = useState("");
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
-  const [questionType, setQuestionType] = useState<QuestionType | null>(null);
 
   const [estados, setEstados] = useState<string[]>([]);
   const [cidades, setCidades] = useState<string[]>([]);
@@ -167,7 +137,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
       const questions: Question[] = data.questions.map((q: QuestionResponse) => ({
         id: q.id,
-        type: q.type,
         statement: q.statement,
         options: q.options ?? [],
         correctAnswerIndex: q.correctAnswerIndex,
@@ -207,7 +176,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       const payload = {
         prompt,
         quantidade: Number(quantity),
-        type: questionType,
         banca: banca || undefined,
         orgao: orgao || undefined,
         cargo: cargo || undefined,
@@ -220,7 +188,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
 
       const questions: Question[] = data.questions.map((q: QuestionResponse) => ({
         id: q.id,
-        type: q.type,
         statement: q.statement,
         options: q.options ?? [],
         correctAnswerIndex: q.correctAnswerIndex,
@@ -253,7 +220,6 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
       setNivel("");
       setCidade("");
       setEstado("");
-      setQuestionType(null);
       setSidebarOpen(false);
 
     } catch (error: any) {
@@ -346,47 +312,9 @@ export default function AIQuizChat({ initialSessionId }: AIQuizChatProps) {
             <>
               {!currentSession && (
                 <div className="max-w-3xl mx-auto mb-6 flex flex-col gap-4" style={{ color: "var(--text)" }}>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <LabeledField label="Banca" tooltip="Selecione a banca">
-                      <Select value={banca} onChange={setBanca} options={BANCA_OPTIONS} placeholder="Selecione a banca" allowCustomValue />
-                    </LabeledField>
-                    <LabeledField label="Tipo de Questões" tooltip="Selecione o formato">
-                      <Select value={questionType ?? ""} onChange={v => setQuestionType(v as QuestionType)} options={QUESTION_TYPE_OPTIONS} placeholder="Selecione o tipo" />
-                    </LabeledField>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <LabeledField label="Quantidade" tooltip="5 a 50">
                       <Select value={quantity} onChange={setQuantity} options={QUANTITY_OPTIONS} placeholder="Quantidade" allowCustomValue />
-                    </LabeledField>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <LabeledField
-                      label="Órgão (opcional)"
-                      tooltip="Selecione ou digite o órgão público do concurso (ex: INSS, RFB)."
-                    >
-                      <Select value={orgao} onChange={setOrgao} options={ORGAO_OPTIONS} placeholder="Selecione o órgão" allowCustomValue />
-                    </LabeledField>
-
-                    <LabeledField
-                      label="Cargo (opcional)"
-                      tooltip="Especifique o cargo pretendido para direcionar as questões."
-                    >
-                      <Select value={cargo} onChange={setCargo} options={CARGO_OPTIONS} placeholder="Selecione o cargo" allowCustomValue />
-                    </LabeledField>
-
-                    <LabeledField
-                      label="Estado (opcional)"
-                      tooltip="Filtre questões aplicadas em exames de um estado específico."
-                    >
-                      <Select value={estado} onChange={setEstado} options={estados} placeholder="Estado" allowCustomValue />
-                    </LabeledField>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <LabeledField
-                      label="Cidade (opcional)"
-                      tooltip="Filtre questões de concursos municipais específicos."
-                    >
-                      <Select value={cidade} onChange={setCidade} options={cidades} placeholder="Cidade" allowCustomValue />
                     </LabeledField>
 
                     <LabeledField

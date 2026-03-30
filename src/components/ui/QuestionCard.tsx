@@ -1,4 +1,4 @@
-import { Question, QuestionType } from "@/src/types/Question";
+import { Question } from "@/src/types/Question";
 import { CheckCircle, CheckCircle2, Lock, Scissors, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -88,7 +88,7 @@ export function QuestionCard({
   const hasComment = q.comment !== undefined && q.comment !== null;
 
   const options =
-    q.type === QuestionType.TRUE_FALSE ? ["Certo", "Errado"] : (q.options ?? []);
+    (q.options ?? []);
 
   function handleConfirm() {
     if (pendingAnswer !== null) {

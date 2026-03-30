@@ -1,4 +1,4 @@
-import { Question, QuestionResponse, QuestionType } from "./Question";
+import { Question, QuestionResponse } from "./Question";
 
 export type StudySession = {
     id: string
@@ -8,13 +8,7 @@ export type StudySession = {
 }
 export interface PromptRequest {
     prompt: string;
-    banca: string;
     quantidade: number;
-    type: QuestionType;
-    orgao: string;
-    cargo: string;
-    cidade: string;
-    estado: string;
     nivel: string;
 }
 
